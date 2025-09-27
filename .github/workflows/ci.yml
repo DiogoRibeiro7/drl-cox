@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: 1.8.3
+
+      - name: Install deps
+        run: |
+          poetry install
+
+      - name: Lint (ruff) & type-check (mypy)
+        run: |
+          poetry run ruff check src
+          poetry run mypy src
+
+      - name: Smoke test
+        run: |
+          poetry run python - << 'PY'
+          from drl_cox import simulate_cox_data, fit_drl_cox
+          data = simulate_cox_data(n=60, d=5, seed=0)
+          _ = fit_drl_cox(data, epsilon=0.05, p=2.0, gamma=2, solver="ECOS", solver_opts={"max_iters": 100})
+          print("ok")
+          PY
