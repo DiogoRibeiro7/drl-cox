@@ -36,7 +36,9 @@ drl-cox/
 ```
 
 ## Overview
+
 Distributionally Robust Cox Regression (Wasserstein) with:
+
 - DRL-Cox convex program (Eq. (5) in CHIL 2025 paper)
 - Classical Cox baselines (partial likelihood; Ridge/Lasso using coordinate descent)
 - Metrics: C-index, iAUC (IPCW)
