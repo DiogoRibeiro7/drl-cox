@@ -1,76 +1,64 @@
-# drl-cox — Distributionally Robust Cox Regression (Wasserstein)
+﻿# DRL-Cox: Distributionally Robust Survival Analysis
 
-A complete, runnable Python repo that includes:
+This repository implements the Wasserstein distributionally robust Cox regression model (DRL-Cox) together with classical baselines, evaluation metrics, and reproducible demo scripts.
 
-1. **DRL‑Cox solver** (cvxpy, exponential‑cone program)
-2. **Standard Cox baselines** (partial likelihood; Ridge/Lasso via coordinate descent)
-3. **Data utilities** to load WHAS500-like CSVs and **contamination helpers** (distributional shift, outliers)
-4. **Poetry** project config + **GitHub Actions CI**
-5. **Metrics** (C-index, time-dependent iAUC/IPCW)
+## Features
 
-> Code is written in English; docstrings, types, runtime checks, and inline comments included.
+- DRL-Cox solver built with `cvxpy` and exponential cone constraints.
+- Baseline Cox proportional hazards estimators (partial likelihood, ridge, lasso).
+- Metrics for censored survival data, including C-index and time-dependent iAUC/IPCW.
+- Data loaders and contamination utilities for WHAS500-style datasets.
+- Poetry project configuration and continuous integration workflow.
 
----
-
-## File tree
+## Repository Layout
 
 ```
 drl-cox/
-├─ pyproject.toml
-├─ README.md
-├─ src/
-│  └─ drl_cox/
-│     ├─ __init__.py
-│     ├─ drl_cox.py            # DRL-Cox solver & CV utilities (from paper)
-│     ├─ estimator.py          # High-level DRLCoxEstimator
-│     ├─ cox_baseline.py       # Classical Cox models (PL, Ridge/Lasso)
-│     ├─ metrics.py            # C-index, iAUC (IPCW)
-│     ├─ datasets.py           # WHAS500 loader + synthetic generator
-│     └─ contamination.py      # Shift & outlier injection helpers
-├─ examples/
-│  ├─ demo_whas500.py
-│  └─ demo_estimator.py
-└─ .github/
-   └─ workflows/
-      └─ ci.yml
+|-- paper/                               # Publication and supplementary material
+|   `-- Distributionally Robust Learning in Survival Analysis.pdf
+|-- examples/                            # End-to-end usage demos
+|-- src/drl_cox/                         # Library code
+|   |-- cox_baseline.py
+|   |-- contamination.py
+|   |-- datasets.py
+|   |-- drl_cox.py
+|   |-- estimator.py
+|   `-- __init__.py
+|-- .github/workflows/ci.yml             # CI pipeline
+|-- pyproject.toml
+`-- README.md
 ```
 
-## Overview
-
-Distributionally Robust Cox Regression (Wasserstein) with:
-
-- DRL-Cox convex program (Eq. (5) in CHIL 2025 paper)
-- Classical Cox baselines (partial likelihood; Ridge/Lasso using coordinate descent)
-- Metrics: C-index, iAUC (IPCW)
-- Data helpers (WHAS500-like CSV loader) and contamination utilities (shift/outliers)
-
-## Install
+## Installation
 
 ```bash
 poetry install
-poetry run python -m pip install -U pip
-````
+```
 
-## Quick start
+The project targets Python 3.11+. Poetry will install the solver dependencies (ECOS and SCS) declared in `pyproject.toml`.
+
+## Quick Start
+
+Run the WHAS500 demo to fit DRL-Cox and baseline models:
 
 ```bash
 poetry run python examples/demo_whas500.py
 ```
 
-The demo:
+The script loads WHAS500-style data (or generates synthetic samples if the CSV is missing), trains DRL-Cox with cross-validated regularization, fits the classical Cox models, and prints the survival metrics.
 
-* Loads a CSV with columns `y`, `zeta` and covariates `x1..xd` (or uses synthetic data if not found)
-* Fits DRL-Cox (ε tuned via CV)
-* Fits standard Cox baselines
-* Prints C-index and iAUC
+## Data Format
 
-## Data format (CSV)
+- `y`: positive survival durations.
+- `zeta`: event indicator (1 if observed, 0 if censored).
+- Covariates: numerical columns such as `x1`, `x2`, ... .
 
-* `y`: positive durations
-* `zeta`: 1 if event observed, 0 if censored
-* Covariates: numeric columns (e.g., `x1`, `x2`, ...)
+## Paper
 
-## Notes
+The accompanying manuscript, *Distributionally Robust Learning in Survival Analysis*, is stored under `paper/`. Keep supplementary figures and future revisions in the same directory for easy reference.
 
-* DRL-Cox requires an exponential-cone capable solver (ECOS or SCS).
-* Use `gamma` to control constraint windowing (O(gamma·N) constraints).
+## Development Notes
+
+- DRL-Cox requires an exponential-cone capable solver. ECOS is the default; uncomment SCS in `pyproject.toml` if needed.
+- Adjust the `gamma` parameter to trade off robustness and computational cost; larger values add more constraints.
+- Use the CI workflow (`.github/workflows/ci.yml`) as a reference when extending tests or adding lint checks.
