@@ -67,6 +67,10 @@ from .drl_cox import (
     kfold_indices,
     risk_linear_predictor,
 )
+from .cross_validation import (
+    AutoSelectionResult,
+    auto_select_epsilon,
+)
 
 # Scikit-learn compatible estimator
 from .estimator import (
@@ -100,6 +104,8 @@ __all__ = [
     "DRLCoxResult",
     "fit_drl_cox",
     "cross_validate_epsilon",
+    "auto_select_epsilon",
+    "AutoSelectionResult",
     "risk_linear_predictor",
     "kfold_indices",
     # Scikit-learn API
@@ -151,6 +157,7 @@ def _check_dependencies():
         "tqdm": "progress bars",
         "matplotlib": "visualization",
         "seaborn": "enhanced plots",
+        "skopt": "Bayesian epsilon selection",
     }
 
     # Check required dependencies

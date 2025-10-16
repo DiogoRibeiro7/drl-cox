@@ -2,18 +2,24 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  schedule:
+    - cron: "0 5 * * 1"
 
 jobs:
   test:
+    name: Tests (py${{ matrix.python-version }} / numpy ${{ matrix.numpy-version }} / ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12"]
+        numpy-version: ["1.26.4", "2.1.2"]
+    env:
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
 
     steps:
       - uses: actions/checkout@v5
@@ -23,25 +29,186 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Cache Poetry and virtualenv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-np${{ matrix.numpy-version }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-np${{ matrix.numpy-version }}-
+            ${{ runner.os }}-py${{ matrix.python-version }}-
+            ${{ runner.os }}-
+
       - name: Install Poetry
         uses: abatilo/actions-poetry@v4
         with:
           poetry-version: 1.8.3
 
-      - name: Install deps
-        run: |
-          poetry install
+      - name: Configure Poetry
+        run: poetry config virtualenvs.in-project true
 
-      - name: Lint (ruff) & type-check (mypy)
+      - name: Install dependencies
         run: |
-          poetry run ruff check src
-          poetry run mypy src
+          poetry install --no-interaction
+          poetry run pip install --upgrade "numpy==${{ matrix.numpy-version }}" pytest-cov
+
+      - name: Lint (ruff)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && startsWith(matrix.numpy-version, '2.')
+        run: poetry run ruff check src
+
+      - name: Type-check (mypy)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && startsWith(matrix.numpy-version, '2.')
+        run: poetry run mypy src
+
+      - name: Run tests with coverage
+        run: |
+          poetry run pytest --cov=src --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage artifact
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && startsWith(matrix.numpy-version, '2.')
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-py${{ matrix.python-version }}-np${{ matrix.numpy-version }}
+          path: coverage.xml
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && startsWith(matrix.numpy-version, '2.')
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
 
       - name: Smoke test
         run: |
-          poetry run python - << 'PY'
+          poetry run python - <<'PY'
           from drl_cox import simulate_cox_data, fit_drl_cox
           data = simulate_cox_data(n=60, d=5, seed=0)
           _ = fit_drl_cox(data, epsilon=0.05, p=2.0, gamma=2, solver="ECOS", solver_opts={"max_iters": 100})
           print("ok")
+          PY
+
+  docs:
+    name: Docs build
+    runs-on: ubuntu-latest
+    needs: test
+    env:
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Cache Poetry and virtualenv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: docs-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            docs-${{ runner.os }}-
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v4
+        with:
+          poetry-version: 1.8.3
+
+      - name: Configure Poetry
+        run: poetry config virtualenvs.in-project true
+
+      - name: Install project dependencies
+        run: poetry install --no-interaction
+
+      - name: Install documentation toolchain
+        run: |
+          if [ -f mkdocs.yml ]; then
+            poetry run pip install mkdocs
+          elif [ -f docs/conf.py ]; then
+            poetry run pip install sphinx
+          else
+            echo "No MkDocs or Sphinx configuration detected; skipping extra installs."
+          fi
+
+      - name: Build documentation
+        run: |
+          if [ -f mkdocs.yml ]; then
+            poetry run mkdocs build --strict
+          elif [ -f docs/conf.py ]; then
+            poetry run sphinx-build -b html docs docs/_build/html
+          else
+            echo "No documentation configuration found; skipping build."
+          fi
+
+  benchmark:
+    name: Benchmark regression
+    runs-on: ubuntu-latest
+    needs: test
+    env:
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Cache Poetry and virtualenv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            .venv
+          key: benchmark-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          restore-keys: |
+            benchmark-${{ runner.os }}-
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v4
+        with:
+          poetry-version: 1.8.3
+
+      - name: Configure Poetry
+        run: poetry config virtualenvs.in-project true
+
+      - name: Install project
+        run: poetry install --no-interaction
+
+      - name: Run benchmark regression check
+        run: |
+          poetry run python - <<'PY'
+          import time
+          from drl_cox import simulate_cox_data, fit_drl_cox, CoxPartialLikelihood
+
+          data = simulate_cox_data(n=150, d=15, seed=123)
+
+          start = time.perf_counter()
+          fit_drl_cox(
+              data,
+              epsilon=0.05,
+              p=2.0,
+              gamma=2,
+              solver="ECOS",
+              solver_opts={"max_iters": 120},
+          )
+          drl_time = time.perf_counter() - start
+
+          start = time.perf_counter()
+          CoxPartialLikelihood(max_iter=30, tol=1e-6).fit(data.X, data.y, data.zeta)
+          baseline_time = time.perf_counter() - start
+
+          print(f"DRL-Cox time: {drl_time:.2f}s; Cox-PL time: {baseline_time:.2f}s")
+
+          if drl_time > 30:
+              raise SystemExit("DRL-Cox benchmark exceeded 30s budget.")
+          if baseline_time > 30:
+              raise SystemExit("Baseline benchmark exceeded 30s budget.")
+          if baseline_time and drl_time > baseline_time * 5:
+              raise SystemExit("DRL-Cox regression unexpectedly slow compared to baseline.")
           PY
