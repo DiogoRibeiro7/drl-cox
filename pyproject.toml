@@ -11,7 +11,7 @@ packages = [{ include = "drl_cox", from = "src" }]
 python = ">=3.11,<3.13"
 numpy = "^2.3.4"
 pandas = "^2.3.3"
-cvxpy = "^1.7.3"
+cvxpy = "^1.7.5"
 scipy = "^1.16.3"
 joblib = "^1.5.2"
 tqdm = "^4.67.1"
