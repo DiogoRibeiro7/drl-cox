@@ -10,7 +10,7 @@ packages = [{ include = "drl_cox", from = "src" }]
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
 numpy = "^2.3.4"
-pandas = "^2.3.3"
+pandas = "^3.0.0"
 cvxpy = "^1.7.3"
 scipy = "^1.16.3"
 joblib = "^1.5.2"
