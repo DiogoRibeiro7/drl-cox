@@ -9,21 +9,21 @@ packages = [{ include = "drl_cox", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
-numpy = "^2.3.4"
+numpy = "^2.4.2"
 pandas = "^2.3.3"
-cvxpy = "^1.7.3"
-scipy = "^1.16.3"
-joblib = "^1.5.2"
-tqdm = "^4.67.1"
-matplotlib = "^3.10.7"
+cvxpy = "^1.8.1"
+scipy = "^1.17.0"
+joblib = "^1.5.3"
+tqdm = "^4.67.3"
+matplotlib = "^3.10.8"
 seaborn = "^0.13.2"
 scikit-optimize = "^0.10.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"
-ruff = "^0.14.3"
-mypy = "^1.18.2"
-matplotlib = "^3.10.7"
+ruff = "^0.15.1"
+mypy = "^1.19.1"
+matplotlib = "^3.10.8"
 seaborn = "^0.13.2"
 
 [tool.ruff]
