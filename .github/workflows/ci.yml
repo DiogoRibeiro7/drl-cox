@@ -30,7 +30,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache Poetry and virtualenv
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/pypoetry
@@ -105,7 +105,7 @@ jobs:
           python-version: "3.11"
 
       - name: Cache Poetry and virtualenv
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/pypoetry
@@ -160,7 +160,7 @@ jobs:
           python-version: "3.11"
 
       - name: Cache Poetry and virtualenv
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cache/pypoetry
