@@ -1,20 +1,20 @@
 """Tests for the scikit-learn compatible DRLCoxEstimator."""
 
 from __future__ import annotations
+
 import numpy as np
 import pytest
+from sklearn.exceptions import NotFittedError
+from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV, cross_val_score
-from sklearn.utils.estimator_checks import check_estimator
 
 from drl_cox import (
     DRLCoxEstimator,
+    SurvivalDataset,
     make_drl_cox_scorer,
     simulate_cox_data,
-    SurvivalDataset,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -49,7 +49,7 @@ class TestDRLCoxEstimatorBasics:
         assert est.epsilon == 0.1
         assert est.p == 2.0
         assert est.gamma == 3
-        assert est.solver == "ECOS"
+        assert est.solver == "CLARABEL"
         assert est.solver_opts is None
 
     def test_init_custom_params(self):
@@ -210,7 +210,7 @@ class TestFitMethod:
         X_bad[0, 0] = np.nan
 
         est = DRLCoxEstimator()
-        with pytest.raises(ValueError, match="non-finite values"):
+        with pytest.raises(ValueError, match="contains NaN"):
             est.fit(X_bad, y, zeta)
 
     def test_fit_epsilon_zero(self, simple_survival_data):
@@ -226,8 +226,8 @@ class TestFitMethod:
         """Test fitting with different solvers."""
         X, y, zeta = simple_survival_data
 
-        for solver in ["ECOS", "SCS"]:
-            est = DRLCoxEstimator(epsilon=0.1, solver=solver)
+        for solver, opts in [("CLARABEL", None), ("SCS", {"max_iters": 2000})]:
+            est = DRLCoxEstimator(epsilon=0.1, solver=solver, solver_opts=opts)
             est.fit(X, y, zeta)
             assert hasattr(est, "beta_")
 
@@ -256,7 +256,7 @@ class TestPredictMethod:
         X, y, zeta = simple_survival_data
         est = DRLCoxEstimator()
 
-        with pytest.raises(Exception):  # sklearn raises NotFittedError
+        with pytest.raises(NotFittedError):
             est.predict(X)
 
     def test_predict_wrong_features(self, simple_survival_data):
@@ -266,7 +266,7 @@ class TestPredictMethod:
         est.fit(X, y, zeta)
 
         X_wrong = X[:, :-1]  # Remove one feature
-        with pytest.raises(ValueError, match="has.*features.*fitted with"):
+        with pytest.raises(ValueError, match="has 4 features.*expecting 5 features"):
             est.predict(X_wrong)
 
     def test_predict_new_samples(self, simple_survival_data):
@@ -275,8 +275,8 @@ class TestPredictMethod:
 
         # Split data
         X_train, X_test = X[:80], X[80:]
-        y_train, y_test = y[:80], y[80:]
-        zeta_train, zeta_test = zeta[:80], zeta[80:]
+        y_train = y[:80]
+        zeta_train = zeta[:80]
 
         # Fit on train
         est = DRLCoxEstimator(epsilon=0.1)
@@ -558,11 +558,11 @@ class TestEdgeCases:
         """Test that fitting is reproducible."""
         X, y, zeta = simple_survival_data
 
-        est1 = DRLCoxEstimator(epsilon=0.1, solver_opts={"max_iters": 200})
+        est1 = DRLCoxEstimator(epsilon=0.1, solver_opts={"max_iter": 200})
         est1.fit(X, y, zeta)
         beta1 = est1.beta_.copy()
 
-        est2 = DRLCoxEstimator(epsilon=0.1, solver_opts={"max_iters": 200})
+        est2 = DRLCoxEstimator(epsilon=0.1, solver_opts={"max_iter": 200})
         est2.fit(X, y, zeta)
         beta2 = est2.beta_.copy()
 
@@ -580,7 +580,7 @@ class TestConsistencyWithFunctionalAPI:
 
     def test_same_results_as_fit_drl_cox(self, simple_survival_data):
         """Test that estimator matches fit_drl_cox results."""
-        from drl_cox import fit_drl_cox, SurvivalDataset
+        from drl_cox import fit_drl_cox
 
         X, y, zeta = simple_survival_data
 

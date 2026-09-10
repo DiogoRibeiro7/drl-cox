@@ -57,12 +57,12 @@ Distributionally Robust Cox Proportional Hazards Model (scikit-learn compatible)
   - Higher values = stronger guarantees, more computation
   - Must be >= 1
 
-- **solver** : `str`, default="ECOS"
-  - CVXPY solver: "ECOS", "SCS", "MOSEK", "CLARABEL"
+- **solver** : `str`, default="CLARABEL"
+  - CVXPY solver: "CLARABEL", "SCS", "ECOS", "MOSEK"
 
 - **solver_opts** : `dict` or `None`, default=None
   - Solver-specific options
-  - Example: `{"max_iters": 500, "abstol": 1e-8}`
+  - Example: `{"max_iter": 500}`
 
 #### Attributes (After Fitting)
 
@@ -138,10 +138,7 @@ from sklearn.preprocessing import StandardScaler
 from drl_cox import DRLCoxEstimator
 
 # Create pipeline
-pipeline = Pipeline([
-    ('scaler', StandardScaler()),
-    ('drl_cox', DRLCoxEstimator(epsilon=0.1))
-])
+pipeline = Pipeline([("scaler", StandardScaler()), ("drl_cox", DRLCoxEstimator(epsilon=0.1))])
 
 # Fit pipeline (pass zeta as fit parameter)
 pipeline.fit(X, y, drl_cox__zeta=zeta)
@@ -158,7 +155,7 @@ c_index = pipeline.score(X, y, drl_cox__zeta=zeta)
 ```python
 # Get parameters
 params = pipeline.get_params()
-print(params['drl_cox__epsilon'])  # Access nested parameter
+print(params["drl_cox__epsilon"])  # Access nested parameter
 
 # Set parameters
 pipeline.set_params(drl_cox__epsilon=0.2, drl_cox__gamma=4)
@@ -179,28 +176,22 @@ X_train, X_val, y_train, y_val, zeta_train, zeta_val = train_test_split(
 )
 
 # Define parameter grid
-param_grid = {
-    'epsilon': [0.0, 0.05, 0.1, 0.2],
-    'gamma': [2, 3, 4]
-}
+param_grid = {"epsilon": [0.0, 0.05, 0.1, 0.2], "gamma": [2, 3, 4]}
 
 # Manual grid search
 results = []
-for epsilon in param_grid['epsilon']:
-    for gamma in param_grid['gamma']:
+for epsilon in param_grid["epsilon"]:
+    for gamma in param_grid["gamma"]:
         model = DRLCoxEstimator(epsilon=epsilon, gamma=gamma)
         model.fit(X_train, y_train, zeta_train)
         score = model.score(X_val, y_val, zeta_val)
-        results.append({
-            'epsilon': epsilon,
-            'gamma': gamma,
-            'score': score
-        })
+        results.append({"epsilon": epsilon, "gamma": gamma, "score": score})
 
 # Find best
 import pandas as pd
+
 results_df = pd.DataFrame(results)
-best = results_df.loc[results_df['score'].idxmax()]
+best = results_df.loc[results_df["score"].idxmax()]
 print(f"Best params: epsilon={best['epsilon']}, gamma={best['gamma']}")
 ```
 
@@ -211,14 +202,14 @@ Standard GridSearchCV has limitations with survival data:
 ```python
 from sklearn.model_selection import GridSearchCV
 
-param_grid = {'epsilon': [0.0, 0.1, 0.2]}
+param_grid = {"epsilon": [0.0, 0.1, 0.2]}
 
 # Note: This requires custom CV splitter for proper zeta handling
 grid_search = GridSearchCV(
     DRLCoxEstimator(),
     param_grid,
     cv=3,
-    scoring=None  # Uses estimator's score method
+    scoring=None,  # Uses estimator's score method
 )
 
 # Limitations: zeta must be passed differently
@@ -292,10 +283,7 @@ print(f"Test C-index: {test_score:.3f}")
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-pipeline = Pipeline([
-    ('scaler', StandardScaler()),
-    ('drl_cox', DRLCoxEstimator(epsilon=0.1))
-])
+pipeline = Pipeline([("scaler", StandardScaler()), ("drl_cox", DRLCoxEstimator(epsilon=0.1))])
 
 pipeline.fit(X_train, y_train, drl_cox__zeta=zeta_train)
 score = pipeline.score(X_test, y_test, drl_cox__zeta=zeta_test)
@@ -364,11 +352,12 @@ The `sample_weight` parameter is not currently supported.
 from sklearn.model_selection import KFold
 from sklearn.base import clone
 
+
 def custom_grid_search_cv(estimator, param_grid, X, y, zeta, cv=5):
     """Custom grid search for survival data."""
     kfold = KFold(n_splits=cv, shuffle=True, random_state=42)
     results = []
-    
+
     for params in ParameterGrid(param_grid):
         scores = []
         for train_idx, val_idx in kfold.split(X):
@@ -376,29 +365,21 @@ def custom_grid_search_cv(estimator, param_grid, X, y, zeta, cv=5):
             X_train, X_val = X[train_idx], X[val_idx]
             y_train, y_val = y[train_idx], y[val_idx]
             zeta_train, zeta_val = zeta[train_idx], zeta[val_idx]
-            
+
             # Fit and score
             model = clone(estimator).set_params(**params)
             model.fit(X_train, y_train, zeta_train)
             score = model.score(X_val, y_val, zeta_val)
             scores.append(score)
-        
-        results.append({
-            **params,
-            'mean_score': np.mean(scores),
-            'std_score': np.std(scores)
-        })
-    
+
+        results.append({**params, "mean_score": np.mean(scores), "std_score": np.std(scores)})
+
     return pd.DataFrame(results)
 
+
 # Usage
-param_grid = {'epsilon': [0.0, 0.1, 0.2]}
-results = custom_grid_search_cv(
-    DRLCoxEstimator(),
-    param_grid,
-    X, y, zeta,
-    cv=5
-)
+param_grid = {"epsilon": [0.0, 0.1, 0.2]}
+results = custom_grid_search_cv(DRLCoxEstimator(), param_grid, X, y, zeta, cv=5)
 ```
 
 ## Best Practices
@@ -431,12 +412,10 @@ model.fit(X_scaled, y, zeta)
 from drl_cox import cross_validate_epsilon
 
 cv_results = cross_validate_epsilon(
-    SurvivalDataset(X, y, zeta),
-    epsilons=[0.0, 0.05, 0.1, 0.2],
-    kfolds=5
+    SurvivalDataset(X, y, zeta), epsilons=[0.0, 0.05, 0.1, 0.2], kfolds=5
 )
 
-best_eps = cv_results.groupby('epsilon')['score'].mean().idxmax()
+best_eps = cv_results.groupby("epsilon")["score"].mean().idxmax()
 ```
 
 ### 4. Check Solver Status
@@ -473,7 +452,7 @@ print(f"zeta shape: {zeta.shape}")
 ### Issue: Solver fails to converge
 
 **Solutions:**
-1. Increase max iterations: `solver_opts={"max_iters": 500}`
+1. Increase max iterations: `solver_opts={"max_iter": 500}`
 2. Try different solver: `solver="SCS"`
 3. Adjust epsilon or gamma
 4. Standardize features
@@ -507,5 +486,5 @@ python examples/sklearn_api_demo.py 4  # Hyperparameter tuning
 ## References
 
 - [scikit-learn Estimator API](https://scikit-learn.org/stable/developers/develop.html)
-- [DRL-Cox Paper](../paper/)
+- [DRL-Cox Paper](https://arxiv.org/abs/2506.01348)
 - [API Reference](api.md)

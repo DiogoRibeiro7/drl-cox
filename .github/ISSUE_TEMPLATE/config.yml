@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and discussion
+    url: https://github.com/DiogoRibeiro7/drl-cox/discussions
+    about: Ask usage questions or discuss ideas before opening an issue.
+  - name: Security vulnerabilities
+    url: https://github.com/DiogoRibeiro7/drl-cox/security/advisories/new
+    about: Report security problems privately.

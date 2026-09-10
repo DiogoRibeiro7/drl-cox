@@ -33,37 +33,30 @@ from __future__ import annotations
 import argparse
 import time
 import tracemalloc
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any
 
-import sys
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SRC_ROOT = REPO_ROOT / "src"
-if str(SRC_ROOT) not in sys.path:
-    sys.path.insert(0, str(SRC_ROOT))
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
 
 from drl_cox import (
-    SurvivalDataset,
-    simulate_cox_data,
-    inject_covariate_shift,
-    inject_outliers,
-    fit_drl_cox,
-    cross_validate_epsilon,
-    risk_linear_predictor,
-    concordance_index,
-    time_dependent_auc_iAUC,
+    CoxLasso,
     CoxPartialLikelihood,
     CoxRidge,
-    CoxLasso,
+    SurvivalDataset,
+    concordance_index,
+    cross_validate_epsilon,
+    fit_drl_cox,
+    inject_covariate_shift,
+    inject_outliers,
+    risk_linear_predictor,
+    simulate_cox_data,
+    time_dependent_auc_iAUC,
 )
-
 
 # ---------------------------------------------------------------------------#
 # Experiment configuration dataclasses
@@ -94,7 +87,9 @@ class ModelSpec:
 # ---------------------------------------------------------------------------#
 
 
-def _generate_base_data(n_train: int, n_test: int, d: int, seed: int) -> tuple[SurvivalDataset, SurvivalDataset]:
+def _generate_base_data(
+    n_train: int, n_test: int, d: int, seed: int
+) -> tuple[SurvivalDataset, SurvivalDataset]:
     """Simulate train/test data with independent seeds."""
     train = simulate_cox_data(n=n_train, d=d, seed=seed)
     test = simulate_cox_data(n=n_test, d=d, seed=seed + 10_000)
@@ -123,7 +118,9 @@ def build_scenarios() -> list[ScenarioVariant]:
     for mean_shift in (0.5, 1.5, 3.0):
         variant_name = f"shift_mean_{str(mean_shift).replace('.', 'p')}"
 
-        def _cov_shift(seed: int, mean: float = mean_shift) -> tuple[SurvivalDataset, SurvivalDataset]:
+        def _cov_shift(
+            seed: int, mean: float = mean_shift
+        ) -> tuple[SurvivalDataset, SurvivalDataset]:
             train, test = _generate_base_data(base_n_train, base_n_test, base_d, seed)
             feature_indices = range(train.X.shape[1] // 2)
             shifted_X = inject_covariate_shift(
@@ -149,7 +146,9 @@ def build_scenarios() -> list[ScenarioVariant]:
         percent = int(ratio * 100)
         variant_name = f"outliers_{percent}pct"
 
-        def _outliers(seed: int, out_ratio: float = ratio) -> tuple[SurvivalDataset, SurvivalDataset]:
+        def _outliers(
+            seed: int, out_ratio: float = ratio
+        ) -> tuple[SurvivalDataset, SurvivalDataset]:
             train, test = _generate_base_data(base_n_train, base_n_test, base_d, seed)
             noisy_X = inject_outliers(
                 train.X,
@@ -195,7 +194,7 @@ def make_drl_model(
     *,
     p: float = 2.0,
     gamma: int = 3,
-    solver: str = "ECOS",
+    solver: str = "CLARABEL",
     solver_opts: dict[str, Any] | None = None,
     cv_kfolds: int = 3,
 ) -> ModelSpec:
@@ -203,7 +202,7 @@ def make_drl_model(
     eps_values = sorted(set(float(eps) for eps in epsilon_grid))
     if not eps_values:
         raise ValueError("epsilon_grid must contain at least one value.")
-    solver_opts = solver_opts or {"max_iters": 200}
+    solver_opts = solver_opts or {"max_iter": 200}
 
     def _fit(train_data: SurvivalDataset) -> tuple[np.ndarray, dict[str, Any]]:
         cv_start = time.perf_counter()
@@ -518,7 +517,10 @@ def main() -> None:
         make_lasso_model(alpha=0.05),
     ]
 
-    print(f"Running benchmark for {len(scenarios)} scenarios, {len(models)} models, {args.repeats} repeats...")
+    print(
+        f"Running benchmark for {len(scenarios)} scenarios, {len(models)} models, "
+        f"{args.repeats} repeats..."
+    )
     results_df = run_benchmark(scenarios, models, repeats=args.repeats)
 
     raw_path = output_dir / "benchmark_comparison_results.csv"

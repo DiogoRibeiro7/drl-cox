@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import pytest
 import numpy as np
+import pytest
 
 from drl_cox import (
-    simulate_cox_data,
+    concordance_index,
     fit_drl_cox,
     risk_linear_predictor,
-    concordance_index,
+    simulate_cox_data,
 )
 from drl_cox.preprocessing import SurvivalStandardScaler, train_test_split_survival
 
@@ -57,13 +57,13 @@ def test_fit_drl_cox_regression_values():
         epsilon=0.05,
         p=2.0,
         gamma=2,
-        solver="SCS",
-        solver_opts={"max_iters": 300},
+        solver="CLARABEL",
     )
 
-    expected_beta = np.array([-0.303127, 0.942189, 0.227534, 0.055548, -0.486481])
-    expected_alpha = 1.1134225688752468
-    expected_objective = 1.203425631245662
+    # Reference values agree across CLARABEL, ECOS and SCS (with tight tolerances).
+    expected_beta = np.array([-0.333013, 1.074195, 0.251388, 0.060238, -0.555921])
+    expected_alpha = 0.274836
+    expected_objective = 1.306351
 
     np.testing.assert_allclose(result.beta, expected_beta, atol=1e-3, rtol=5e-3)
     assert pytest.approx(expected_alpha, abs=1e-3, rel=5e-3) == result.alpha

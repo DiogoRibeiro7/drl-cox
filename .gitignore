@@ -49,7 +49,17 @@ whas500*.csv
 .mypy_cache/
 .dmypy.json
 
-# pytest
+# pytest / coverage
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
+
+# ruff
+.ruff_cache/
+
+# Poetry cache used by CI
+.poetry-cache/
+
+# MkDocs output
+site/

@@ -1,20 +1,21 @@
 from __future__ import annotations
+
 import os
-import numpy as np
+
 from drl_cox import (
-    load_whas500_like_csv,
-    simulate_cox_data,
-    inject_covariate_shift,
-    inject_outliers,
-    SurvivalDataset,
-    fit_drl_cox,
-    cross_validate_epsilon,
-    risk_linear_predictor,
-    concordance_index,
-    time_dependent_auc_iAUC,
+    CoxLasso,
     CoxPartialLikelihood,
     CoxRidge,
-    CoxLasso,
+    SurvivalDataset,
+    concordance_index,
+    cross_validate_epsilon,
+    fit_drl_cox,
+    inject_covariate_shift,
+    inject_outliers,
+    load_whas500_like_csv,
+    risk_linear_predictor,
+    simulate_cox_data,
+    time_dependent_auc_iAUC,
 )
 
 CSV_PATH = os.environ.get("WHAS500_CSV", "whas500_sample.csv")
@@ -40,15 +41,17 @@ cv = cross_validate_epsilon(
     gamma=3,
     kfolds=3,
     metric="cindex",
-    solver="ECOS",
-    solver_opts={"max_iters": 200},
+    solver="CLARABEL",
+    solver_opts={"max_iter": 200},
 )
 print(cv.groupby("epsilon")["score"].mean())
 
 best_eps = float(cv.groupby("epsilon")["score"].mean().idxmax())
 print(f"Best epsilon: {best_eps}")
 
-res = fit_drl_cox(contaminated, epsilon=best_eps, p=2.0, gamma=3, solver="ECOS", solver_opts={"max_iters": 300})
+res = fit_drl_cox(
+    contaminated, epsilon=best_eps, p=2.0, gamma=3, solver="CLARABEL", solver_opts={"max_iter": 300}
+)
 rb = res.beta
 r_scores = risk_linear_predictor(contaminated.X, rb)
 
@@ -67,5 +70,7 @@ for name, beta in [
     ("Cox-Lasso", cox_lasso),
 ]:
     rs = risk_linear_predictor(contaminated.X, beta)
-    print(f"{name:10s}  C-index={concordance_index(rs, contaminated.y, contaminated.zeta):.3f}  "
-          f"iAUC={time_dependent_auc_iAUC(rs, contaminated.y, contaminated.zeta):.3f}")
+    print(
+        f"{name:10s}  C-index={concordance_index(rs, contaminated.y, contaminated.zeta):.3f}  "
+        f"iAUC={time_dependent_auc_iAUC(rs, contaminated.y, contaminated.zeta):.3f}"
+    )

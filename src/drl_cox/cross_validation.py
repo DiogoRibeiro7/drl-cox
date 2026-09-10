@@ -13,18 +13,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
-from .drl_cox import SurvivalDataset, cross_validate_epsilon
+from .drl_cox import DEFAULT_SOLVER, SurvivalDataset, cross_validate_epsilon
 
 try:  # pragma: no cover - optional dependency checked at runtime
     from skopt import Optimizer
     from skopt.space import Real
 except ImportError:  # pragma: no cover
-    Optimizer = None  # type: ignore[assignment]
-    Real = None  # type: ignore[assignment]
+    Optimizer = None
+    Real = None
 
 __all__ = ["AutoSelectionResult", "auto_select_epsilon"]
 
@@ -54,7 +55,7 @@ class AutoSelectionResult:
     best_score: float
     confidence_interval: tuple[float, float]
     trials: pd.DataFrame
-    figure: plt.Figure | None
+    figure: Figure | None
     surrogate_model: Any | None
 
 
@@ -76,7 +77,7 @@ def auto_select_epsilon(
     metric: Literal["cindex", "iauc"] = "cindex",
     p: float = 2.0,
     gamma: int = 3,
-    solver: str = "ECOS",
+    solver: str = DEFAULT_SOLVER,
     solver_opts: dict[str, Any] | None = None,
     iauc_average: Literal["uniform", "event"] = "event",
     epsilon_bounds: tuple[float, float] | None = None,
@@ -150,7 +151,7 @@ def auto_select_epsilon(
 
     evaluations: list[dict[str, float]] = []
 
-    for step in range(n_calls):
+    for _ in range(n_calls):
         epsilon = float(optimizer.ask()[0])
         scores_df = cross_validate_epsilon(
             data,
@@ -174,10 +175,10 @@ def auto_select_epsilon(
 
     trials = pd.DataFrame(evaluations)
     best_idx = int(trials["score"].idxmax())
-    best_epsilon = float(trials.loc[best_idx, "epsilon"])
-    best_score = float(trials.loc[best_idx, "score"])
+    best_epsilon = float(trials["epsilon"].to_numpy()[best_idx])
+    best_score = float(trials["score"].to_numpy()[best_idx])
 
-    figure: plt.Figure | None = None
+    figure: Figure | None = None
     ci_low, ci_high = bounds
 
     if optimizer.models:

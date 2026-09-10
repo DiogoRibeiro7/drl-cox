@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite it using the metadata below and
+  cite the DRL-Cox paper it implements (see "references").
+type: software
+title: "drl-cox: distributionally robust Cox regression in Python"
+abstract: >-
+  Python implementation of the Wasserstein distributionally robust Cox
+  regression model (DRL-Cox) with classical Cox baselines, censoring-aware
+  evaluation metrics, preprocessing utilities and a scikit-learn compatible
+  estimator.
+authors:
+  - family-names: Ribeiro
+    given-names: Diogo
+    email: dfr@esmad.ipp.pt
+version: 0.1.0
+date-released: "2025-10-12"
+license: MIT
+repository-code: https://github.com/DiogoRibeiro7/drl-cox
+url: https://diogoribeiro7.github.io/drl-cox/
+keywords:
+  - survival analysis
+  - Cox regression
+  - distributionally robust optimization
+  - Wasserstein distance
+  - robust statistics
+references:
+  - type: conference-paper
+    title: Distributionally Robust Learning in Survival Analysis
+    authors:
+      - family-names: Jin
+        given-names: Yeping
+      - family-names: Wise
+        given-names: Lauren
+      - family-names: Paschalidis
+        given-names: Ioannis Ch.
+    collection-title: >-
+      Proceedings of the Conference on Health, Inference, and Learning (CHIL 2025)
+    journal: Proceedings of Machine Learning Research
+    volume: 287
+    start: 1
+    end: 12
+    year: 2025
+    url: https://proceedings.mlr.press/v287/jin25a.html
+    identifiers:
+      - type: url
+        value: https://arxiv.org/abs/2506.01348
+      - type: other
+        value: arXiv:2506.01348

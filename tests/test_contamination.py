@@ -1,19 +1,16 @@
 """Tests for contamination utilities."""
+
 from __future__ import annotations
+
 import numpy as np
+
 from drl_cox import inject_covariate_shift, inject_outliers
 
 
 def test_inject_covariate_shift():
     """Test covariate shift injection."""
     X = np.random.randn(50, 10)
-    X_shifted = inject_covariate_shift(
-        X,
-        feature_indices=[0, 1, 2],
-        mean=5.0,
-        std=2.0,
-        seed=42
-    )
+    X_shifted = inject_covariate_shift(X, feature_indices=[0, 1, 2], mean=5.0, std=2.0, seed=42)
     assert X_shifted.shape == X.shape
     # Shifted features should differ
     assert not np.allclose(X[:, :3], X_shifted[:, :3])

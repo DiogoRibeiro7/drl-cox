@@ -2,21 +2,21 @@
 
 ## Requirements
 
-- Python 3.10, 3.11, or 3.12
-- Poetry (recommended) or pip
+- Python 3.11, 3.12 or 3.13
+- pip, or Poetry 2 for development installs
 
 ## Installation Methods
-
-### Using Poetry (Recommended)
-
-```bash
-poetry add drl-cox
-```
 
 ### Using pip
 
 ```bash
 pip install drl-cox
+```
+
+### Using Poetry
+
+```bash
+poetry add drl-cox
 ```
 
 ### From Source
@@ -31,18 +31,23 @@ poetry install
 
 ```python
 import drl_cox
+
 print(drl_cox.__version__)
 ```
 
 ## Troubleshooting
 
-### CVXPY Installation Issues
+### Solvers
 
-If you encounter issues with CVXPY solvers:
+DRL-Cox needs a solver that supports the exponential cone. Clarabel is installed
+with CVXPY and is the default. SCS is also installed. The legacy ECOS solver can be
+added on Python 3.11 and 3.12 with:
 
 ```bash
-poetry add cvxpy[CBC,GLPK]  # Additional solvers
+pip install "drl-cox[ecos]"
 ```
+
+MOSEK works as well if you have a licence.
 
 ### macOS Apple Silicon
 

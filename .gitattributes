@@ -1,0 +1,11 @@
+# Normalise line endings: store everything as LF, check out as LF.
+* text=auto eol=lf
+
+# Binary assets
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ipynb text eol=lf
+
+# Keep generated lock file diffs out of the way in PR views.
+poetry.lock linguist-generated=true

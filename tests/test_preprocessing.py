@@ -3,23 +3,25 @@ Comprehensive tests for the preprocessing module.
 """
 
 from __future__ import annotations
+
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
-import warnings
+
 from drl_cox import SurvivalDataset, simulate_cox_data
 from drl_cox.preprocessing import (
     SurvivalStandardScaler,
+    balance_censoring,
+    compute_feature_importance,
+    create_time_dependent_features,
     detect_outliers,
+    discretize_time,
     handle_missing_data,
     train_test_split_survival,
-    create_time_dependent_features,
-    discretize_time,
-    balance_censoring,
     validate_survival_data,
-    compute_feature_importance,
 )
-
 
 # ============================================================================
 # Fixtures
@@ -42,7 +44,7 @@ def data_with_missing():
     X[X < -2] = np.nan
     y = np.random.exponential(2, 50)
     zeta = np.random.binomial(1, 0.7, 50)
-    return SurvivalDataset(X=X, y=y, zeta=zeta)
+    return SurvivalDataset(X=X, y=y, zeta=zeta, validate=False)
 
 
 @pytest.fixture
@@ -136,7 +138,7 @@ class TestSurvivalStandardScaler:
     def test_ipcw_weighting(self, simple_survival_data):
         """Test IPCW weighting."""
         scaler = SurvivalStandardScaler(use_ipcw=True)
-        data_scaled = scaler.fit_transform(simple_survival_data)
+        scaler.fit_transform(simple_survival_data)
 
         # Check weights were computed
         assert scaler._ipcw_weights is not None
@@ -205,23 +207,13 @@ class TestDetectOutliers:
 
     def test_isolation_forest(self, data_with_outliers):
         """Test Isolation Forest outlier detection."""
-        try:
-            from sklearn.ensemble import IsolationForest
-
-            outliers = detect_outliers(data_with_outliers, method="isolation", contamination=0.1)
-            assert outliers.sum() > 0
-        except ImportError:
-            pytest.skip("scikit-learn not installed")
+        outliers = detect_outliers(data_with_outliers, method="isolation", contamination=0.1)
+        assert outliers.sum() > 0
 
     def test_lof_method(self, simple_survival_data):
         """Test Local Outlier Factor."""
-        try:
-            from sklearn.neighbors import LocalOutlierFactor
-
-            outliers = detect_outliers(simple_survival_data, method="lof", contamination=0.05)
-            assert isinstance(outliers, np.ndarray)
-        except ImportError:
-            pytest.skip("scikit-learn not installed")
+        outliers = detect_outliers(simple_survival_data, method="lof", contamination=0.05)
+        assert isinstance(outliers, np.ndarray)
 
     def test_return_scores(self, data_with_outliers):
         """Test returning outlier scores."""
@@ -297,13 +289,8 @@ class TestHandleMissingData:
 
     def test_knn_imputation(self, data_with_missing):
         """Test KNN imputation."""
-        try:
-            from sklearn.impute import KNNImputer
-
-            data_clean, _ = handle_missing_data(data_with_missing, strategy="knn", n_neighbors=3)
-            assert not np.any(np.isnan(data_clean.X))
-        except ImportError:
-            pytest.skip("scikit-learn not installed")
+        data_clean, _ = handle_missing_data(data_with_missing, strategy="knn", n_neighbors=3)
+        assert not np.any(np.isnan(data_clean.X))
 
     def test_missing_indicator(self, data_with_missing):
         """Test missing indicator creation."""
@@ -323,7 +310,7 @@ class TestHandleMissingData:
         zeta = np.random.binomial(1, 0.7, 20).astype(float)
         zeta[1] = np.nan  # Missing event indicator
 
-        data = SurvivalDataset(X=X, y=y, zeta=zeta)
+        data = SurvivalDataset(X=X, y=y, zeta=zeta, validate=False)
 
         data_clean, _ = handle_missing_data(data, strategy="median")
 
@@ -527,7 +514,7 @@ class TestValidateSurvivalData:
         y = np.array([1, 2, -1, 3, 4, 5, 6, 7, 8, 9])  # Negative time
         zeta = np.ones(10)
 
-        data = SurvivalDataset(X=X, y=y, zeta=zeta)
+        data = SurvivalDataset(X=X, y=y, zeta=zeta, validate=False)
 
         is_valid, diagnostics = validate_survival_data(data, verbose=False)
 
@@ -540,7 +527,7 @@ class TestValidateSurvivalData:
         y = np.random.exponential(2, 10)
         zeta = np.array([0, 1, 2, 0, 1, 0, 1, 0, 1, 0])  # Invalid value 2
 
-        data = SurvivalDataset(X=X, y=y, zeta=zeta)
+        data = SurvivalDataset(X=X, y=y, zeta=zeta, validate=False)
 
         is_valid, diagnostics = validate_survival_data(data, verbose=False)
 
@@ -613,7 +600,7 @@ class TestIntegration:
         y = np.random.exponential(2, 200)
         zeta = np.random.binomial(1, 0.3, 200)  # Imbalanced
 
-        data = SurvivalDataset(X=X, y=y, zeta=zeta)
+        data = SurvivalDataset(X=X, y=y, zeta=zeta, validate=False)
 
         # 1. Validate
         is_valid, _ = validate_survival_data(data, verbose=False)
