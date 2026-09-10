@@ -1,5 +1,3 @@
-# docs/api.md
-
 # API Reference
 
 ## Core Classes
@@ -11,11 +9,12 @@ from dataclasses import dataclass
 from typing import Any, Dict
 import numpy as np
 
+
 @dataclass(frozen=True)
 class SurvivalDataset:
-    X: np.ndarray      # Covariates (N, d)
-    y: np.ndarray      # Survival times (N,)
-    zeta: np.ndarray   # Event indicators (N,)
+    X: np.ndarray  # Covariates (N, d)
+    y: np.ndarray  # Survival times (N,)
+    zeta: np.ndarray  # Event indicators (N,)
 ```
 
 ### `DRLCoxResult`
@@ -25,14 +24,15 @@ from dataclasses import dataclass
 from typing import Any, Dict
 import numpy as np
 
+
 @dataclass
 class DRLCoxResult:
-    beta: np.ndarray           # Coefficient vector
-    alpha: float               # Time-scale parameter
-    s: np.ndarray              # Slack variables
-    objective_value: float     # Final objective
-    status: str                # Solver status
-    info: Dict[str, Any]       # Additional info
+    beta: np.ndarray  # Coefficient vector
+    alpha: float  # Time-scale parameter
+    s: np.ndarray  # Slack variables
+    objective_value: float  # Final objective
+    status: str  # Solver status
+    info: Dict[str, Any]  # Additional info
 ```
 
 ## Main Functions
@@ -45,7 +45,7 @@ def fit_drl_cox(
     epsilon: float,
     p: float = 2.0,
     gamma: int = 3,
-    solver: str = "ECOS",
+    solver: str = "CLARABEL",
     solver_opts: Optional[Dict[str, Any]] = None,
 ) -> DRLCoxResult:
     """Fit the Wasserstein distributionally robust Cox model."""
@@ -76,7 +76,7 @@ def cross_validate_epsilon(
     gamma: int = 3,
     kfolds: int = 5,
     metric: Literal["cindex", "iauc"] = "cindex",
-    solver: str = "ECOS",
+    solver: str = "CLARABEL",
     solver_opts: Optional[Dict[str, Any]] = None,
     iauc_average: Literal["uniform", "event"] = "event",
 ) -> pd.DataFrame:
@@ -86,11 +86,7 @@ def cross_validate_epsilon(
 ### `concordance_index`
 
 ```python
-def concordance_index(
-    risk_scores: np.ndarray,
-    y: np.ndarray,
-    zeta: np.ndarray
-) -> float:
+def concordance_index(risk_scores: np.ndarray, y: np.ndarray, zeta: np.ndarray) -> float:
     """Compute Harrell's C-index for survival predictions."""
 ```
 

@@ -48,7 +48,7 @@ results = cross_validate_epsilon(
     data,
     epsilons=[0.0, 0.1, 0.2],
     kfolds=5,
-    n_jobs=1  # Sequential
+    n_jobs=1,  # Sequential
 )
 ```
 
@@ -56,50 +56,23 @@ results = cross_validate_epsilon(
 
 ```python
 # Use 4 cores
-results = cross_validate_epsilon(
-    data,
-    epsilons=[0.0, 0.1, 0.2],
-    kfolds=5,
-    n_jobs=4
-)
+results = cross_validate_epsilon(data, epsilons=[0.0, 0.1, 0.2], kfolds=5, n_jobs=4)
 
 # Use all available cores
-results = cross_validate_epsilon(
-    data,
-    epsilons=[0.0, 0.1, 0.2],
-    kfolds=5,
-    n_jobs=-1
-)
+results = cross_validate_epsilon(data, epsilons=[0.0, 0.1, 0.2], kfolds=5, n_jobs=-1)
 
 # Use all but one core
-results = cross_validate_epsilon(
-    data,
-    epsilons=[0.0, 0.1, 0.2],
-    kfolds=5,
-    n_jobs=-2
-)
+results = cross_validate_epsilon(data, epsilons=[0.0, 0.1, 0.2], kfolds=5, n_jobs=-2)
 ```
 
 ### Control Verbosity
 
 ```python
 # Silent mode (no progress bars or output)
-results = cross_validate_epsilon(
-    data,
-    epsilons=[0.0, 0.1, 0.2],
-    kfolds=5,
-    n_jobs=4,
-    verbose=False
-)
+results = cross_validate_epsilon(data, epsilons=[0.0, 0.1, 0.2], kfolds=5, n_jobs=4, verbose=False)
 
 # Verbose mode (default)
-results = cross_validate_epsilon(
-    data,
-    epsilons=[0.0, 0.1, 0.2],
-    kfolds=5,
-    n_jobs=4,
-    verbose=True
-)
+results = cross_validate_epsilon(data, epsilons=[0.0, 0.1, 0.2], kfolds=5, n_jobs=4, verbose=True)
 ```
 
 ## API Reference
@@ -124,7 +97,7 @@ results = cross_validate_epsilon(
 - **`metric`** : `Literal["cindex", "iauc"]`, default="cindex"  
   Evaluation metric
 
-- **`solver`** : `str`, default="ECOS"  
+- **`solver`** : `str`, default="CLARABEL"  
   CVXPY solver name
 
 - **`solver_opts`** : `Optional[Dict[str, Any]]`, default=None  
@@ -207,16 +180,12 @@ n_jobs = -2  # All but one core
 ### 2. Optimize Solver Settings
 
 ```python
-# Reduce max_iters for faster (but less accurate) CV
-solver_opts = {"max_iters": 100}  # Instead of 300
+# Reduce max_iter for faster (but less accurate) CV
+solver_opts = {"max_iter": 100}  # Instead of 300
 
 # Use faster solver for initial screening
 cross_validate_epsilon(
-    data,
-    epsilons=[0.0, 0.1, 0.2, 0.5],
-    solver="ECOS",
-    solver_opts={"max_iters": 100},
-    n_jobs=-1
+    data, epsilons=[0.0, 0.1, 0.2, 0.5], solver="CLARABEL", solver_opts={"max_iter": 100}, n_jobs=-1
 )
 ```
 
@@ -225,20 +194,12 @@ cross_validate_epsilon(
 ```python
 # Start with coarse grid
 coarse_eps = [0.0, 0.1, 0.2, 0.5]
-coarse_results = cross_validate_epsilon(
-    data, 
-    epsilons=coarse_eps,
-    n_jobs=-1
-)
+coarse_results = cross_validate_epsilon(data, epsilons=coarse_eps, n_jobs=-1)
 
 # Refine around best epsilon
-best_eps = coarse_results.groupby('epsilon')['score'].mean().idxmax()
+best_eps = coarse_results.groupby("epsilon")["score"].mean().idxmax()
 fine_eps = [best_eps - 0.05, best_eps, best_eps + 0.05]
-fine_results = cross_validate_epsilon(
-    data,
-    epsilons=fine_eps,
-    n_jobs=-1
-)
+fine_results = cross_validate_epsilon(data, epsilons=fine_eps, n_jobs=-1)
 ```
 
 ### 4. Reduce Number of Folds for Large Datasets
@@ -279,11 +240,7 @@ This will:
 from drl_cox import benchmark_parallel_cv
 
 results = benchmark_parallel_cv(
-    n=500,
-    d=20,
-    kfolds=10,
-    epsilons=[0.0, 0.1, 0.2, 0.3],
-    n_jobs_list=[1, 2, 4, 8, -1]
+    n=500, d=20, kfolds=10, epsilons=[0.0, 0.1, 0.2, 0.3], n_jobs_list=[1, 2, 4, 8, -1]
 )
 ```
 
@@ -334,7 +291,7 @@ except Exception as e:
 results = cross_validate_epsilon(data, epsilons=..., n_jobs=4)
 
 # Reduce solver iterations
-solver_opts = {"max_iters": 100}
+solver_opts = {"max_iter": 100}
 ```
 
 ### Issue: Out of Memory Errors
@@ -364,7 +321,7 @@ n_jobs = 1
 cross_validate_epsilon(data, epsilons=..., random_seed=42)
 
 # Increase solver tolerance
-solver_opts = {"max_iters": 500, "abstol": 1e-8}
+solver_opts = {"max_iter": 500}
 ```
 
 ## Migration Guide
@@ -390,7 +347,7 @@ cv_results = cross_validate_epsilon(
     kfolds=5,
     n_jobs=-1,  # New parameter
     verbose=True,  # New parameter
-    random_seed=42  # New parameter for reproducibility
+    random_seed=42,  # New parameter for reproducibility
 )
 ```
 

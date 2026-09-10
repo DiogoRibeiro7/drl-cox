@@ -26,10 +26,7 @@ from drl_cox import cross_validate_epsilon
 
 # Find optimal epsilon
 cv_results = cross_validate_epsilon(
-    data,
-    epsilons=[0.0, 0.05, 0.1, 0.2, 0.5],
-    kfolds=5,
-    metric="cindex"
+    data, epsilons=[0.0, 0.05, 0.1, 0.2, 0.5], kfolds=5, metric="cindex"
 )
 
 # Best epsilon
@@ -43,12 +40,7 @@ print(f"Best epsilon: {best_eps}")
 from drl_cox import inject_covariate_shift, inject_outliers
 
 # Add contamination
-X_shifted = inject_covariate_shift(
-    data.X,
-    feature_indices=[0, 1],
-    mean=2.0,
-    std=1.5
-)
+X_shifted = inject_covariate_shift(data.X, feature_indices=[0, 1], mean=2.0, std=1.5)
 X_noisy = inject_outliers(X_shifted, ratio=0.15, severity_std=3.0)
 
 contaminated = SurvivalDataset(X=X_noisy, y=data.y, zeta=data.zeta)
