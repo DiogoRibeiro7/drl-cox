@@ -17,6 +17,7 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from .drl_cox import (
+    DEFAULT_SOLVER,
     SurvivalDataset,
     fit_drl_cox,
     kfold_indices,
@@ -40,9 +41,9 @@ def _fit_single_fold(
 ) -> dict[str, Any]:
     """
     Fit DRL-Cox on a single fold and compute validation score.
-    
+
     This function is designed to be called in parallel across folds.
-    
+
     Parameters
     ----------
     train_data : SurvivalDataset
@@ -67,7 +68,7 @@ def _fit_single_fold(
         Fold identifier
     random_seed : int
         Random seed for reproducibility
-        
+
     Returns
     -------
     Dict[str, Any]
@@ -75,7 +76,7 @@ def _fit_single_fold(
     """
     # Set random seed for this fold to ensure reproducibility
     np.random.seed(random_seed + fold_id)
-    
+
     try:
         # Fit DRL-Cox on training data
         result = fit_drl_cox(
@@ -84,55 +85,43 @@ def _fit_single_fold(
             p=p,
             gamma=gamma,
             solver=solver,
-            solver_opts=solver_opts or {}
+            solver_opts=solver_opts or {},
         )
-        
+
         # Check if optimization was successful
         if result.status not in ["optimal", "optimal_inaccurate"]:
             warnings.warn(
                 f"Fold {fold_id}, ε={epsilon}: Solver status '{result.status}'",
-                RuntimeWarning
+                RuntimeWarning,
+                stacklevel=2,
             )
-            return {
-                "epsilon": epsilon,
-                "fold": fold_id,
-                "score": np.nan,
-                "status": result.status
-            }
-        
+            return {"epsilon": epsilon, "fold": fold_id, "score": np.nan, "status": result.status}
+
         # Compute validation risk scores
         beta = result.beta
         risk_val = risk_linear_predictor(val_data.X, beta)
-        
+
         # Compute validation metric
         if metric == "cindex":
             score = concordance_index(risk_val, val_data.y, val_data.zeta)
         else:  # iauc
             score = time_dependent_auc_iAUC(
-                risk_val, 
-                val_data.y, 
-                val_data.zeta,
-                times=None,
-                average=iauc_average
+                risk_val, val_data.y, val_data.zeta, times=None, average=iauc_average
             )
-        
-        return {
-            "epsilon": epsilon,
-            "fold": fold_id,
-            "score": score,
-            "status": result.status
-        }
-        
+
+        return {"epsilon": epsilon, "fold": fold_id, "score": score, "status": result.status}
+
     except Exception as e:
         warnings.warn(
             f"Fold {fold_id}, ε={epsilon}: Error during fitting: {str(e)}",
-            RuntimeWarning
+            RuntimeWarning,
+            stacklevel=2,
         )
         return {
             "epsilon": epsilon,
             "fold": fold_id,
             "score": np.nan,
-            "status": f"error: {str(e)[:50]}"
+            "status": f"error: {str(e)[:50]}",
         }
 
 
@@ -143,7 +132,7 @@ def cross_validate_epsilon(
     gamma: int = 3,
     kfolds: int = 5,
     metric: Literal["cindex", "iauc"] = "cindex",
-    solver: str = "ECOS",
+    solver: str = DEFAULT_SOLVER,
     solver_opts: dict[str, Any] | None = None,
     iauc_average: Literal["uniform", "event"] = "event",
     n_jobs: int = 1,
@@ -152,10 +141,10 @@ def cross_validate_epsilon(
 ) -> pd.DataFrame:
     """
     Cross-validate DRL-Cox across multiple epsilon values with parallel execution.
-    
+
     This optimized version supports parallel processing across folds and epsilon
     values, with progress bars and proper memory management.
-    
+
     Parameters
     ----------
     data : SurvivalDataset
@@ -170,7 +159,7 @@ def cross_validate_epsilon(
         Number of cross-validation folds
     metric : Literal["cindex", "iauc"], default="cindex"
         Evaluation metric
-    solver : str, default="ECOS"
+    solver : str, default=DEFAULT_SOLVER
         CVXPY solver name
     solver_opts : Optional[Dict[str, Any]], default=None
         Solver-specific options
@@ -183,41 +172,26 @@ def cross_validate_epsilon(
         Show progress bars
     random_seed : int, default=42
         Random seed for fold generation and reproducibility
-        
+
     Returns
     -------
     pd.DataFrame
         DataFrame with columns: epsilon, fold, score, status
-        
+
     Examples
     --------
     >>> from drl_cox import simulate_cox_data, cross_validate_epsilon
     >>> data = simulate_cox_data(n=200, d=10, seed=42)
-    >>> 
+    >>>
     >>> # Sequential execution
-    >>> results = cross_validate_epsilon(
-    ...     data,
-    ...     epsilons=[0.0, 0.1, 0.2],
-    ...     kfolds=5,
-    ...     n_jobs=1
-    ... )
-    >>> 
+    >>> results = cross_validate_epsilon(data, epsilons=[0.0, 0.1, 0.2], kfolds=5, n_jobs=1)
+    >>>
     >>> # Parallel execution with 4 cores
-    >>> results = cross_validate_epsilon(
-    ...     data,
-    ...     epsilons=[0.0, 0.1, 0.2],
-    ...     kfolds=5,
-    ...     n_jobs=4
-    ... )
-    >>> 
+    >>> results = cross_validate_epsilon(data, epsilons=[0.0, 0.1, 0.2], kfolds=5, n_jobs=4)
+    >>>
     >>> # Use all available cores
-    >>> results = cross_validate_epsilon(
-    ...     data,
-    ...     epsilons=[0.0, 0.1, 0.2],
-    ...     kfolds=5,
-    ...     n_jobs=-1
-    ... )
-    
+    >>> results = cross_validate_epsilon(data, epsilons=[0.0, 0.1, 0.2], kfolds=5, n_jobs=-1)
+
     Notes
     -----
     - Parallelization is done across (epsilon, fold) combinations
@@ -228,11 +202,11 @@ def cross_validate_epsilon(
     """
     # Convert epsilons to list for consistency
     epsilon_list = list(epsilons)
-    
+
     # Generate fold indices (deterministic with random_seed)
     N = data.X.shape[0]
     folds = kfold_indices(N, k=kfolds, seed=random_seed)
-    
+
     # Create all (epsilon, fold) combinations
     tasks = []
     for eps in epsilon_list:
@@ -240,38 +214,34 @@ def cross_validate_epsilon(
             # Get train/val indices
             val_idx = folds[fold_id]
             train_idx = np.setdiff1d(np.arange(N), val_idx)
-            
+
             # Create train and validation datasets
-            train_data = SurvivalDataset(
-                data.X[train_idx], 
-                data.y[train_idx], 
-                data.zeta[train_idx]
+            train_data = SurvivalDataset(data.X[train_idx], data.y[train_idx], data.zeta[train_idx])
+            val_data = SurvivalDataset(data.X[val_idx], data.y[val_idx], data.zeta[val_idx])
+
+            tasks.append(
+                {
+                    "train_data": train_data,
+                    "val_data": val_data,
+                    "epsilon": eps,
+                    "fold_id": fold_id,
+                }
             )
-            val_data = SurvivalDataset(
-                data.X[val_idx], 
-                data.y[val_idx], 
-                data.zeta[val_idx]
-            )
-            
-            tasks.append({
-                "train_data": train_data,
-                "val_data": val_data,
-                "epsilon": eps,
-                "fold_id": fold_id,
-            })
-    
+
     # Determine number of jobs
     if n_jobs == -1:
         import os
+
         n_jobs = os.cpu_count() or 1
     elif n_jobs < -1:
         import os
+
         n_jobs = max(1, (os.cpu_count() or 1) + 1 + n_jobs)
-    
+
     # Prepare progress bar
     total_tasks = len(tasks)
     desc = f"CV: {len(epsilon_list)} epsilons × {kfolds} folds"
-    
+
     if verbose:
         print("Starting cross-validation:")
         print(f"  - Epsilon values: {len(epsilon_list)}")
@@ -280,7 +250,7 @@ def cross_validate_epsilon(
         print(f"  - Parallel jobs: {n_jobs}")
         print(f"  - Metric: {metric}")
         print()
-    
+
     # Execute in parallel with progress bar
     if n_jobs == 1:
         # Sequential execution
@@ -305,8 +275,8 @@ def cross_validate_epsilon(
         results = Parallel(
             n_jobs=n_jobs,
             verbose=0,
-            max_nbytes='100M',  # Limit memory usage for large arrays
-            backend='loky',  # Use loky backend for better process isolation
+            max_nbytes="100M",  # Limit memory usage for large arrays
+            backend="loky",  # Use loky backend for better process isolation
         )(
             delayed(_fit_single_fold)(
                 train_data=task["train_data"],
@@ -323,19 +293,19 @@ def cross_validate_epsilon(
             )
             for task in tqdm(tasks, desc=desc, disable=not verbose)
         )
-    
+
     # Convert results to DataFrame
     results_df = pd.DataFrame(results)
-    
+
     # Report any failures
     if verbose:
-        n_failures = results_df['score'].isna().sum()
+        n_failures = results_df["score"].isna().sum()
         if n_failures > 0:
             print(f"\n⚠️  Warning: {n_failures}/{total_tasks} tasks failed")
             print("   Check 'status' column for details")
         else:
             print(f"\n✓ All {total_tasks} tasks completed successfully")
-    
+
     return results_df
 
 
@@ -349,7 +319,7 @@ def benchmark_parallel_cv(
 ) -> pd.DataFrame:
     """
     Benchmark parallel cross-validation performance.
-    
+
     Parameters
     ----------
     n : int, default=500
@@ -362,61 +332,57 @@ def benchmark_parallel_cv(
         Epsilon values to test (default: [0.0, 0.1, 0.2, 0.3])
     n_jobs_list : Optional[list[int]], default=None
         List of n_jobs values to benchmark (default: [1, 2, 4, -1])
-        
+
     Returns
     -------
     pd.DataFrame
         Benchmark results with columns: n_jobs, time_seconds, speedup
-        
+
     Examples
     --------
     >>> from drl_cox import benchmark_parallel_cv
-    >>> 
+    >>>
     >>> # Benchmark with default settings
     >>> results = benchmark_parallel_cv()
     >>> print(results)
-    >>> 
+    >>>
     >>> # Custom benchmark
     >>> results = benchmark_parallel_cv(
-    ...     n=1000,
-    ...     d=30,
-    ...     kfolds=5,
-    ...     epsilons=[0.0, 0.1, 0.2],
-    ...     n_jobs_list=[1, 2, 4, 8]
+    ...     n=1000, d=30, kfolds=5, epsilons=[0.0, 0.1, 0.2], n_jobs_list=[1, 2, 4, 8]
     ... )
     """
     import time
 
     from .datasets import simulate_cox_data
-    
+
     if epsilons is None:
         epsilons = [0.0, 0.1, 0.2, 0.3]
-    
+
     if n_jobs_list is None:
         n_jobs_list = [1, 2, 4, -1]
-    
-    print("="*80)
+
+    print("=" * 80)
     print("PARALLEL CROSS-VALIDATION BENCHMARK")
-    print("="*80)
+    print("=" * 80)
     print(f"\nDataset: n={n}, d={d}")
     print(f"CV setup: {len(epsilons)} epsilons × {kfolds} folds = {len(epsilons) * kfolds} tasks")
     print(f"Testing n_jobs: {n_jobs_list}")
     print()
-    
+
     # Generate synthetic data
     print("Generating synthetic data...")
     data = simulate_cox_data(n=n, d=d, seed=42, baseline_hazard=0.02, censor_rate=0.35)
     print(f"Data generated: {data.X.shape[0]} samples, {data.X.shape[1]} features")
     print()
-    
+
     # Benchmark each n_jobs setting
     benchmark_results = []
-    
+
     for n_jobs in n_jobs_list:
         print(f"Testing n_jobs={n_jobs}...")
-        
+
         start_time = time.time()
-        
+
         results = cross_validate_epsilon(
             data,
             epsilons=epsilons,
@@ -424,45 +390,48 @@ def benchmark_parallel_cv(
             gamma=3,
             kfolds=kfolds,
             metric="cindex",
-            solver="ECOS",
-            solver_opts={"max_iters": 200},
+            solver=DEFAULT_SOLVER,
+            solver_opts={"max_iter": 200},
             n_jobs=n_jobs,
             verbose=False,
         )
-        
+
         elapsed_time = time.time() - start_time
-        
+
         # Check for failures
-        n_failures = results['score'].isna().sum()
-        mean_score = results['score'].mean()
-        
-        benchmark_results.append({
-            'n_jobs': n_jobs,
-            'time_seconds': elapsed_time,
-            'mean_score': mean_score,
-            'n_failures': n_failures,
-        })
-        
+        n_failures = results["score"].isna().sum()
+        mean_score = results["score"].mean()
+
+        benchmark_results.append(
+            {
+                "n_jobs": n_jobs,
+                "time_seconds": elapsed_time,
+                "mean_score": mean_score,
+                "n_failures": n_failures,
+            }
+        )
+
         print(f"   Time: {elapsed_time:.2f}s")
         print(f"   Mean score: {mean_score:.4f}")
         print(f"   Failures: {n_failures}")
         print()
-    
+
     # Create results DataFrame
     benchmark_df = pd.DataFrame(benchmark_results)
-    
+
     # Calculate speedup relative to sequential execution
-    baseline_time = benchmark_df[benchmark_df['n_jobs'] == 1]['time_seconds'].values[0]
-    benchmark_df['speedup'] = baseline_time / benchmark_df['time_seconds']
-    benchmark_df['efficiency'] = benchmark_df['speedup'] / benchmark_df['n_jobs'].abs()
-    
+    baseline_time = benchmark_df[benchmark_df["n_jobs"] == 1]["time_seconds"].values[0]
+    benchmark_df["speedup"] = baseline_time / benchmark_df["time_seconds"]
+    benchmark_df["efficiency"] = benchmark_df["speedup"] / benchmark_df["n_jobs"].abs()
+
     # Display results
-    print("="*80)
+    print("=" * 80)
     print("BENCHMARK RESULTS")
-    print("="*80)
-    print(benchmark_df.to_string(index=False, float_format=lambda x: f'{x:.2f}'))
+    print("=" * 80)
+    print(benchmark_df.to_string(index=False, float_format=lambda x: f"{x:.2f}"))
     print()
-    print(f"Best speedup: {benchmark_df['speedup'].max():.2f}x with n_jobs={benchmark_df.loc[benchmark_df['speedup'].idxmax(), 'n_jobs']}")
+    best_row = benchmark_df.loc[benchmark_df["speedup"].idxmax()]
+    print(f"Best speedup: {best_row['speedup']:.2f}x with n_jobs={best_row['n_jobs']}")
     print()
-    
+
     return benchmark_df

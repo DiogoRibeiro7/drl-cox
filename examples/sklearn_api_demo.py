@@ -5,18 +5,18 @@ This script shows how to use DRL-Cox with scikit-learn pipelines,
 cross-validation, and hyperparameter tuning.
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 
 from drl_cox import (
     DRLCoxEstimator,
+    concordance_index,
     make_drl_cox_scorer,
     simulate_cox_data,
-    concordance_index,
 )
 
 
@@ -38,7 +38,7 @@ def example_1_basic_usage():
     model = DRLCoxEstimator(epsilon=0.1, gamma=3)
     model.fit(X, y, zeta)
 
-    print(f"✓ Model fitted successfully")
+    print("✓ Model fitted successfully")
     print(f"  Status: {model.status_}")
     print(f"  Objective: {model.objective_value_:.6f}")
 
@@ -81,7 +81,7 @@ def example_2_train_test_split():
     train_score = model.score(X_train, y_train, zeta_train)
     test_score = model.score(X_test, y_test, zeta_test)
 
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  Train C-index: {train_score:.4f}")
     print(f"  Test C-index:  {test_score:.4f}")
     print(f"  Difference:    {train_score - test_score:.4f}")
@@ -116,11 +116,11 @@ def example_3_pipeline():
     risk_scores = pipeline.predict(X)
     c_index = concordance_index(risk_scores, y, zeta)
 
-    print(f"\nResults:")
+    print("\nResults:")
     print(f"  C-index: {c_index:.4f}")
 
     # Get pipeline parameters
-    print(f"\nPipeline parameters:")
+    print("\nPipeline parameters:")
     params = pipeline.get_params()
     for key in ["drl_cox__epsilon", "drl_cox__gamma", "drl_cox__solver"]:
         if key in params:
@@ -144,14 +144,14 @@ def example_4_parameter_tuning():
         X, y, zeta, test_size=0.3, random_state=42
     )
 
-    print(f"\nData split:")
+    print("\nData split:")
     print(f"  Train: {X_train.shape[0]} samples")
     print(f"  Validation: {X_val.shape[0]} samples")
 
     # Define parameter grid
     param_grid = {"epsilon": [0.0, 0.05, 0.1, 0.2, 0.3], "gamma": [2, 3, 4]}
 
-    print(f"\nParameter grid:")
+    print("\nParameter grid:")
     print(f"  epsilon: {param_grid['epsilon']}")
     print(f"  gamma: {param_grid['gamma']}")
     print(f"  Total combinations: {len(param_grid['epsilon']) * len(param_grid['gamma'])}")
@@ -178,13 +178,13 @@ def example_4_parameter_tuning():
     best_idx = results_df["val_score"].idxmax()
     best_params = results_df.loc[best_idx]
 
-    print(f"\nBest parameters:")
+    print("\nBest parameters:")
     print(f"  epsilon: {best_params['epsilon']}")
     print(f"  gamma: {best_params['gamma']}")
     print(f"  Validation C-index: {best_params['val_score']:.4f}")
 
     # Refit on full training data with best parameters
-    print(f"\nRefitting with best parameters on full training set...")
+    print("\nRefitting with best parameters on full training set...")
     best_model = DRLCoxEstimator(epsilon=best_params["epsilon"], gamma=int(best_params["gamma"]))
     best_model.fit(X_train, y_train, zeta_train)
     final_score = best_model.score(X_val, y_val, zeta_val)
@@ -291,7 +291,7 @@ def example_6_custom_scorer():
     # Compare with built-in score method
     builtin_score = model.score(X, y, zeta)
     print(f"  Built-in score: {builtin_score:.4f}")
-    print(f"  (Built-in uses C-index by default)")
+    print("  (Built-in uses C-index by default)")
 
     print()
 
@@ -414,11 +414,11 @@ def example_9_reproducibility():
     print("\nFitting same model twice...")
 
     # Fit model twice with same parameters
-    model1 = DRLCoxEstimator(epsilon=0.1, solver_opts={"max_iters": 200})
+    model1 = DRLCoxEstimator(epsilon=0.1, solver_opts={"max_iter": 200})
     model1.fit(X, y, zeta)
     beta1 = model1.beta_.copy()
 
-    model2 = DRLCoxEstimator(epsilon=0.1, solver_opts={"max_iters": 200})
+    model2 = DRLCoxEstimator(epsilon=0.1, solver_opts={"max_iter": 200})
     model2.fit(X, y, zeta)
     beta2 = model2.beta_.copy()
 

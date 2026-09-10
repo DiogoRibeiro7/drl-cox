@@ -1,7 +1,10 @@
 """Tests for DRL-Cox solver."""
+
 from __future__ import annotations
+
 import numpy as np
 import pytest
+
 from drl_cox import SurvivalDataset, fit_drl_cox, simulate_cox_data
 
 
@@ -23,8 +26,8 @@ def test_fit_drl_cox_basic():
         epsilon=0.1,
         p=2.0,
         gamma=2,
-        solver="ECOS",
-        solver_opts={"max_iters": 100}
+        solver="CLARABEL",
+        solver_opts={"max_iter": 100},
     )
     assert result.beta.shape == (3,)
     assert isinstance(result.alpha, float)
@@ -37,14 +40,14 @@ def test_survival_dataset_validation():
         SurvivalDataset(
             X=np.array([[1, 2], [3, 4]]),
             y=np.array([1.0, -1.0]),  # negative duration
-            zeta=np.array([1, 1])
+            zeta=np.array([1, 1]),
         )
-    
+
     with pytest.raises(ValueError):
         SurvivalDataset(
             X=np.array([[1, 2], [3, 4]]),
             y=np.array([1.0, 2.0]),
-            zeta=np.array([1, 2])  # invalid event indicator
+            zeta=np.array([1, 2]),  # invalid event indicator
         )
 
 

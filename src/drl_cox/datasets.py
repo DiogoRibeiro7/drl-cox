@@ -1,14 +1,16 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional
+
 import numpy as np
 import pandas as pd
+
 from .drl_cox import SurvivalDataset  # re-use the dataclass type
 
 __all__ = ["load_whas500_like_csv", "simulate_cox_data"]
 
 
-def load_whas500_like_csv(path: str, *, y_col: str = "y", zeta_col: str = "zeta") -> SurvivalDataset:
+def load_whas500_like_csv(
+    path: str, *, y_col: str = "y", zeta_col: str = "zeta"
+) -> SurvivalDataset:
     """Load a CSV with columns y (duration), zeta (event), and covariates x*.
 
     Parameters

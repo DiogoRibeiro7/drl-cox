@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Literal, Dict, Any, List, Tuple
+
+from typing import Literal
+
 import numpy as np
 
 __all__ = [
@@ -53,6 +55,7 @@ def concordance_index(risk_scores: np.ndarray, y: np.ndarray, zeta: np.ndarray) 
 
 # --- iAUC (IPCW) helpers ---
 
+
 def _km_gbar(times: np.ndarray, zeta: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Kaplan-Meier of censoring survival G(t-)."""
     _assert_ndarray("times", times, 1)
@@ -70,7 +73,7 @@ def _km_gbar(times: np.ndarray, zeta: np.ndarray) -> tuple[np.ndarray, np.ndarra
         d = np.sum((times == t) & (delta_c == 1))
         at_risk = np.sum(times >= t)
         if at_risk > 0:
-            prod *= (1.0 - d / at_risk)
+            prod *= 1.0 - d / at_risk
         G[k] = prod
 
     G_left = np.ones_like(G)
@@ -111,7 +114,7 @@ def time_dependent_auc_iAUC(
 
     for t in times:
         cases = (zeta == 1) & (y <= t)
-        ctrls = (y > t)
+        ctrls = y > t
         if not np.any(cases) or not np.any(ctrls):
             continue
 

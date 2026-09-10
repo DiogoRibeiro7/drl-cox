@@ -1,9 +1,24 @@
+"""Classical Cox proportional-hazards baselines.
+
+Three lightweight estimators built on the Breslow partial likelihood:
+
+* :class:`CoxPartialLikelihood` -- unpenalised Newton-Raphson fit.
+* :class:`CoxRidge` -- L2-penalised Newton-Raphson fit.
+* :class:`CoxLasso` -- L1-penalised proximal-gradient (ISTA) fit.
+
+The penalised objectives are normalised by the number of samples, so ``alpha`` is
+comparable across datasets of different sizes (as in ``glmnet``).
+"""
+
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional, Literal
+
 import numpy as np
 
 __all__ = ["CoxPartialLikelihood", "CoxRidge", "CoxLasso"]
+
+_EXP_CLIP = 50.0
 
 
 def _assert_ndarray(name: str, arr: np.ndarray, ndim: int | None = None) -> None:
@@ -13,132 +28,157 @@ def _assert_ndarray(name: str, arr: np.ndarray, ndim: int | None = None) -> None
         raise ValueError(f"{name} must have ndim={ndim}, got {arr.ndim}")
 
 
+def _check_inputs(X: np.ndarray, y: np.ndarray, zeta: np.ndarray) -> None:
+    _assert_ndarray("X", X, 2)
+    _assert_ndarray("y", y, 1)
+    _assert_ndarray("zeta", zeta, 1)
+    if y.shape[0] != X.shape[0] or zeta.shape[0] != X.shape[0]:
+        raise ValueError("X, y and zeta must have the same number of samples.")
+
+
 def _riskset_prefix_sums(y: np.ndarray, Xbeta: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Sort by descending y so risk sets are prefixes; return sorted indices and exp(Xβ) prefix sums."""
+    """Sort by descending ``y`` so that risk sets are prefixes.
+
+    Returns the sort order and the cumulative sums of ``exp(Xbeta)`` in that order.
+    """
     order = np.argsort(-y)
-    y_sorted = y[order]
-    Xb_sorted = Xbeta[order]
-    exp_Xb = np.exp(np.clip(Xb_sorted, -50, 50))
+    exp_Xb = np.exp(np.clip(Xbeta[order], -_EXP_CLIP, _EXP_CLIP))
     prefix = np.cumsum(exp_Xb)
     return order, prefix
 
 
+def _partial_loglik_derivatives(
+    X: np.ndarray, y: np.ndarray, zeta: np.ndarray, beta: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Gradient and Hessian of the Cox log partial likelihood (Breslow ties)."""
+    d = X.shape[1]
+    Xb = X @ beta
+    w = np.exp(np.clip(Xb, -_EXP_CLIP, _EXP_CLIP))
+    grad = np.zeros(d)
+    hess = np.zeros((d, d))
+    for i in np.flatnonzero(zeta == 1):
+        w_i = np.where(y >= y[i], w, 0.0)
+        w_sum = w_i.sum()
+        if w_sum <= 0:
+            continue
+        Ex = (X * w_i[:, None]).sum(axis=0) / w_sum
+        Exx = (X.T * w_i) @ X / w_sum
+        grad += X[i] - Ex
+        hess -= Exx - np.outer(Ex, Ex)
+    return grad, hess
+
+
+def _partial_grad(X: np.ndarray, y: np.ndarray, zeta: np.ndarray, beta: np.ndarray) -> float:
+    """Sum over coordinates of the partial log-likelihood gradient.
+
+    Kept for backwards compatibility; prefer :func:`_partial_loglik_derivatives`.
+    """
+    grad, _ = _partial_loglik_derivatives(X, y, zeta, beta)
+    return float(np.sum(grad))
+
+
+def _newton_cox(
+    X: np.ndarray,
+    y: np.ndarray,
+    zeta: np.ndarray,
+    *,
+    l2: float,
+    max_iter: int,
+    tol: float,
+) -> np.ndarray:
+    """Maximise ``loglik(beta) / n - l2 * ||beta||^2 / 2`` with Newton-Raphson steps.
+
+    Singular Hessians (no events, constant features, more features than samples,
+    perfect separation) fall back to a least-squares Newton step so that the
+    iteration always returns a finite coefficient vector.
+    """
+    n, d = X.shape
+    beta = np.zeros(d)
+    if not np.any(zeta == 1):
+        return beta  # no events: the partial likelihood is flat, the penalised maximiser is 0
+    eye = np.eye(d)
+    for _ in range(max_iter):
+        grad, hess = _partial_loglik_derivatives(X, y, zeta, beta)
+        grad = grad / n - l2 * beta
+        hess = hess / n - l2 * eye
+        try:
+            step = np.linalg.solve(hess, grad)
+        except np.linalg.LinAlgError:
+            step = np.linalg.lstsq(hess, grad, rcond=None)[0]
+        beta_new = beta - step
+        if not np.all(np.isfinite(beta_new)):
+            break
+        converged = float(np.linalg.norm(beta_new - beta)) < tol
+        beta = beta_new
+        if converged:
+            break
+    return beta
+
+
 @dataclass
 class CoxPartialLikelihood:
+    """Unpenalised Cox model fitted by Newton-Raphson on the partial likelihood."""
+
     max_iter: int = 50
     tol: float = 1e-6
 
     def fit(self, X: np.ndarray, y: np.ndarray, zeta: np.ndarray) -> np.ndarray:
-        """Newton–Raphson on partial log-likelihood (no penalty)."""
-        _assert_ndarray("X", X, 2)
-        _assert_ndarray("y", y, 1)
-        _assert_ndarray("zeta", zeta, 1)
-        N, d = X.shape
-        beta = np.zeros(d)
-
-        for _ in range(self.max_iter):
-            Xb = X @ beta
-            order, prefix = _riskset_prefix_sums(y, Xb)
-            # Efficient contributions using prefix sums
-            grad = np.zeros(d)
-            H = np.zeros((d, d))
-
-            # Map inverse permutation for quick rank lookup
-            inv = np.empty(N, dtype=int)
-            inv[order] = np.arange(N)
-
-            exp_Xb = np.exp(np.clip(Xb, -50, 50))
-
-            for i in range(N):
-                if zeta[i] != 1:
-                    continue
-                rk = inv[i]
-                denom = prefix[rk]
-                # E[X | riskset] under weights exp(Xβ)
-                w = exp_Xb.copy()
-                # zero those not in risk set: require y_j >= y_i
-                mask = (y >= y[i])
-                w[~mask] = 0.0
-                w_sum = w.sum()
-                if w_sum <= 0:
-                    continue
-                Ex = (X * w[:, None]).sum(axis=0) / w_sum
-                grad += (X[i] - Ex)
-
-                # Hessian contribution: Var[X | riskset]
-                Exx = (X[:, :, None] * X[:, None, :] * w[:, None, None]).sum(axis=0) / w_sum
-                H -= (Exx - np.outer(Ex, Ex))
-
-            step = np.linalg.solve(H, grad)
-            beta_new = beta - step
-            if np.linalg.norm(beta_new - beta) < self.tol:
-                beta = beta_new
-                break
-            beta = beta_new
-        return beta
+        """Return the coefficient vector maximising the partial likelihood."""
+        _check_inputs(X, y, zeta)
+        return _newton_cox(X, y, zeta, l2=0.0, max_iter=self.max_iter, tol=self.tol)
 
 
 @dataclass
 class CoxRidge:
-    alpha: float = 1.0  # L2 penalty strength
+    """L2-penalised Cox model maximising ``loglik / n - alpha * ||beta||^2 / 2``."""
+
+    alpha: float = 1.0
     max_iter: int = 50
     tol: float = 1e-6
 
     def fit(self, X: np.ndarray, y: np.ndarray, zeta: np.ndarray) -> np.ndarray:
-        base = CoxPartialLikelihood(max_iter=self.max_iter, tol=self.tol)
-        beta = base.fit(X, y, zeta)
-        # Single proximal step toward ridge (small adjustment)
-        return beta / (1.0 + self.alpha)
+        """Return the ridge-penalised coefficient vector."""
+        if self.alpha < 0:
+            raise ValueError("alpha must be >= 0.")
+        _check_inputs(X, y, zeta)
+        return _newton_cox(X, y, zeta, l2=self.alpha, max_iter=self.max_iter, tol=self.tol)
 
 
 @dataclass
 class CoxLasso:
-    alpha: float = 0.01  # L1 penalty strength
+    """L1-penalised Cox model minimising ``-loglik / n + alpha * ||beta||_1``.
+
+    Fitted with proximal gradient descent (ISTA) using a fixed step size derived
+    from a Lipschitz bound on the gradient.
+    """
+
+    alpha: float = 0.01
     max_iter: int = 100
     tol: float = 1e-6
 
     def fit(self, X: np.ndarray, y: np.ndarray, zeta: np.ndarray) -> np.ndarray:
-        """Coordinate descent on partial likelihood + L1.
-        Simple implementation; for serious use prefer glmnet-like libraries.
-        """
-        _assert_ndarray("X", X, 2)
-        _assert_ndarray("y", y, 1)
-        _assert_ndarray("zeta", zeta, 1)
-        N, d = X.shape
+        """Return the lasso-penalised coefficient vector."""
+        if self.alpha < 0:
+            raise ValueError("alpha must be >= 0.")
+        _check_inputs(X, y, zeta)
+        n, d = X.shape
         beta = np.zeros(d)
+        n_events = int(np.sum(zeta == 1))
+        if n_events == 0:
+            return beta
+
+        # Each event contributes a weighted covariance of the rows of X to the Hessian
+        # of -loglik / n, which is bounded by the largest squared row norm.
+        lipschitz = (n_events / n) * float(np.max(np.sum(X**2, axis=1))) + 1e-12
+        step = 1.0 / lipschitz
+        threshold = step * self.alpha
 
         for _ in range(self.max_iter):
-            beta_old = beta.copy()
-            # Update each coordinate with a soft-thresholding step on gradient approx
-            for j in range(d):
-                # Numerical gradient (cheap approx):
-                eps = 1e-5
-                e_j = np.zeros(d); e_j[j] = 1.0
-                g_plus = _partial_grad(X, y, zeta, beta + eps * e_j)
-                g_minus = _partial_grad(X, y, zeta, beta - eps * e_j)
-                grad_j = (g_plus - g_minus) / (2 * eps)
-                # Soft threshold
-                bj = beta[j] - 0.01 * grad_j  # small step
-                beta[j] = np.sign(bj) * max(0.0, abs(bj) - self.alpha * 0.01)
-            if np.linalg.norm(beta - beta_old) < self.tol:
+            grad, _ = _partial_loglik_derivatives(X, y, zeta, beta)
+            z = beta + step * grad / n
+            beta_new = np.sign(z) * np.maximum(np.abs(z) - threshold, 0.0)
+            converged = float(np.linalg.norm(beta_new - beta)) < self.tol
+            beta = beta_new
+            if converged:
                 break
         return beta
-
-
-def _partial_grad(X: np.ndarray, y: np.ndarray, zeta: np.ndarray, beta: np.ndarray) -> float:
-    """Return sum of gradients along all dimensions (proxy for per-coordinate update)."""
-    Xb = X @ beta
-    order = np.argsort(-y)
-    exp_Xb = np.exp(np.clip(Xb, -50, 50))
-    grad = np.zeros_like(beta)
-    for i in range(X.shape[0]):
-        if zeta[i] != 1:
-            continue
-        mask = (y >= y[i])
-        w = exp_Xb * mask
-        w_sum = w.sum()
-        if w_sum <= 0:
-            continue
-        Ex = (X * w[:, None]).sum(axis=0) / w_sum
-        grad += (X[i] - Ex)
-    return float(np.sum(grad))

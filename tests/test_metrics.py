@@ -1,12 +1,16 @@
 """Tests for survival metrics."""
+
 from __future__ import annotations
+
 import numpy as np
+
 from drl_cox import concordance_index, time_dependent_auc_iAUC
 
 
 def test_concordance_index_perfect():
     """Test C-index with perfect predictions."""
-    risk = np.array([1.0, 2.0, 3.0, 4.0])
+    # Higher risk must correspond to an earlier event for perfect concordance.
+    risk = np.array([4.0, 3.0, 2.0, 1.0])
     y = np.array([1.0, 2.0, 3.0, 4.0])
     zeta = np.array([1, 1, 1, 1])
     c = concordance_index(risk, y, zeta)

@@ -1,17 +1,18 @@
 """Comprehensive tests for Cox baseline models."""
 
 from __future__ import annotations
+
 import numpy as np
 import pytest
+
 from drl_cox.cox_baseline import (
+    CoxLasso,
     CoxPartialLikelihood,
     CoxRidge,
-    CoxLasso,
     _assert_ndarray,
-    _riskset_prefix_sums,
     _partial_grad,
+    _riskset_prefix_sums,
 )
-
 
 # ============================================================================
 # Helper Functions and Fixtures
@@ -609,7 +610,6 @@ class TestModelComparisons:
         """Test that regularization helps with overfitting."""
         np.random.seed(888)
         n_train = 30
-        n_test = 50
         d = 10  # High dimensional
 
         # Training data
@@ -621,15 +621,6 @@ class TestModelComparisons:
         C_train = np.random.exponential(scale=np.quantile(T_train, 0.6), size=n_train)
         y_train = np.minimum(T_train, C_train)
         zeta_train = (T_train <= C_train).astype(int)
-
-        # Test data
-        X_test = np.random.randn(n_test, d)
-        linear_pred_test = X_test @ beta_true
-        u_test = np.random.uniform(size=n_test)
-        T_test = -np.log(u_test) / (0.01 * np.exp(linear_pred_test))
-        C_test = np.random.exponential(scale=np.quantile(T_test, 0.6), size=n_test)
-        y_test = np.minimum(T_test, C_test)
-        zeta_test = (T_test <= C_test).astype(int)
 
         # Fit models
         pl = CoxPartialLikelihood()
@@ -730,8 +721,8 @@ class TestEdgeCases:
 
         # Should still converge and be finite
         assert np.all(np.isfinite(beta))
-        # Should be strongly positive (higher X -> later time)
-        assert beta[0] > 0
+        # Higher X -> later events -> lower hazard, so the coefficient is negative.
+        assert beta[0] < 0
 
     def test_zero_variance_feature(self):
         """Test with a feature that has zero variance."""
@@ -852,7 +843,6 @@ class TestPerformanceAndStability:
 
     def test_memory_efficiency(self):
         """Test that models don't consume excessive memory."""
-        import sys
 
         np.random.seed(666)
 
@@ -924,7 +914,7 @@ class TestIntegration:
         test_idx = np.arange(n // 2, n)
 
         X_train, y_train, zeta_train = X[train_idx], y[train_idx], zeta[train_idx]
-        X_test, y_test, zeta_test = X[test_idx], y[test_idx], zeta[test_idx]
+        X_test = X[test_idx]
 
         # Fit on train
         pl = CoxPartialLikelihood()
@@ -1039,7 +1029,7 @@ class TestDocumentationExamples:
         zeta = (T <= C).astype(int)
 
         # Fit models
-        from drl_cox.cox_baseline import CoxPartialLikelihood, CoxRidge, CoxLasso
+        from drl_cox.cox_baseline import CoxLasso, CoxPartialLikelihood, CoxRidge
 
         pl = CoxPartialLikelihood()
         beta_pl = pl.fit(X, y, zeta)
