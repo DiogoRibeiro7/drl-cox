@@ -1,11 +1,6 @@
-# Default owner for everything
+# Default owner for everything in the repository.
+*           @DiogoRibeiro7
 
-- @diogoribeiro7
-
-# Workflows
-
-/.github/ @diogoribeiro7
-
-# Documentation
-
-/docs/ @diogoribeiro7
+# Automation and documentation.
+/.github/   @DiogoRibeiro7
+/docs/      @DiogoRibeiro7

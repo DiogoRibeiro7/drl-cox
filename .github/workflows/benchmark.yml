@@ -1,0 +1,57 @@
+name: Benchmark
+
+# Timing regression check. Runs weekly and on demand rather than on every PR,
+# because wall-clock measurements on shared runners are too noisy to gate merges.
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  POETRY_VERSION: "2.2.1"
+
+jobs:
+  benchmark:
+    name: DRL-Cox vs Cox partial likelihood
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pipx install "poetry==$POETRY_VERSION"
+
+      - name: Install dependencies
+        run: poetry sync --no-interaction
+
+      - name: Run benchmark
+        run: |
+          poetry run python - <<'PY'
+          import time
+
+          from drl_cox import CoxPartialLikelihood, fit_drl_cox, simulate_cox_data
+
+          data = simulate_cox_data(n=150, d=15, seed=123)
+
+          start = time.perf_counter()
+          fit_drl_cox(data, epsilon=0.05, p=2.0, gamma=2)
+          drl_time = time.perf_counter() - start
+
+          start = time.perf_counter()
+          CoxPartialLikelihood(max_iter=30, tol=1e-6).fit(data.X, data.y, data.zeta)
+          baseline_time = time.perf_counter() - start
+
+          print(f"DRL-Cox: {drl_time:.2f}s  Cox partial likelihood: {baseline_time:.2f}s")
+          if drl_time > 60:
+              raise SystemExit("DRL-Cox fit exceeded the 60s budget.")
+          if baseline_time > 60:
+              raise SystemExit("Baseline fit exceeded the 60s budget.")
+          PY
