@@ -24,8 +24,8 @@ the documentation toolchain.
 
 ## Branches
 
-- `main` holds released code. Tags of the form `vX.Y.Z` are cut from `main`.
-- `develop` is the integration branch. Open pull requests against `develop`.
+- `main` is the only long-lived branch; open pull requests against it.
+- Releases are tags of the form `vX.Y.Z` on `main`.
 
 ## Running the checks
 
