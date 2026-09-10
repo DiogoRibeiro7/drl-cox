@@ -1,40 +1,147 @@
-[tool.poetry]
+[project]
 name = "drl-cox"
 version = "0.1.0"
-description = "Distributionally Robust Cox Regression with Wasserstein ambiguity, plus classical Cox baselines and evaluation utilities."
-authors = ["Diogo Ribeiro <dfr@esmad.ipp.pt>"]
-license = "MIT"
+description = "Distributionally robust Cox regression with Wasserstein ambiguity sets, plus classical Cox baselines and survival evaluation utilities."
 readme = "README.md"
-packages = [{ include = "drl_cox", from = "src" }]
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Diogo Ribeiro", email = "dfr@esmad.ipp.pt" }]
+maintainers = [{ name = "Diogo Ribeiro", email = "dfr@esmad.ipp.pt" }]
+requires-python = ">=3.11,<3.14"
+keywords = [
+  "survival-analysis",
+  "cox-regression",
+  "distributionally-robust-optimization",
+  "wasserstein-distance",
+  "robust-statistics",
+  "convex-optimization",
+  "biostatistics",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Typing :: Typed",
+]
+dependencies = [
+  "numpy>=2.0,<3",
+  "pandas>=2.2,<3",
+  "scipy>=1.13",
+  "cvxpy>=1.6",
+  "scikit-learn>=1.6",
+  "scikit-optimize>=0.10",
+  "joblib>=1.3",
+  "tqdm>=4.66",
+  "matplotlib>=3.8",
+  "seaborn>=0.13",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<3.13"
-numpy = "^2.4.2"
-pandas = "^2.3.3"
-cvxpy = "^1.8.1"
-scipy = "^1.17.0"
-joblib = "^1.5.3"
-tqdm = "^4.67.3"
-matplotlib = "^3.10.8"
-seaborn = "^0.13.2"
-scikit-optimize = "^0.10.2"
+[project.optional-dependencies]
+# ECOS ships no wheels for Python 3.13; it is opt-in and only for older interpreters.
+ecos = ["ecos>=2.0.14; python_version < '3.13'"]
+
+[project.urls]
+Homepage = "https://github.com/DiogoRibeiro7/drl-cox"
+Documentation = "https://diogoribeiro7.github.io/drl-cox/"
+Repository = "https://github.com/DiogoRibeiro7/drl-cox"
+Issues = "https://github.com/DiogoRibeiro7/drl-cox/issues"
+Changelog = "https://github.com/DiogoRibeiro7/drl-cox/blob/main/CHANGELOG.md"
+
+[tool.poetry]
+packages = [{ include = "drl_cox", from = "src" }]
+requires-poetry = ">=2.0"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.2"
-ruff = "^0.15.1"
-mypy = "^1.19.1"
-matplotlib = "^3.10.8"
-seaborn = "^0.13.2"
+pytest = ">=8.4"
+pytest-cov = ">=6.0"
+ruff = ">=0.16"
+mypy = ">=1.19"
+pandas-stubs = ">=2.2,<3"
+pre-commit = ">=4.0"
+
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = ">=1.6,<2"
+mkdocs-material = ">=9.6"
+mkdocstrings = { version = ">=0.27", extras = ["python"] }
 
 [tool.ruff]
 line-length = 100
-select = ["E","F","I","UP","B","ANN"]
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["paper", "examples/results"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "ANN"]
+ignore = [
+  "ANN401", # explicit `Any` is acceptable in a few signatures
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN"]
+"examples/**" = ["ANN"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["drl_cox"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.mypy]
-python_version = "3.10"
-warn_unused_configs = true
+files = ["src"]
 strict = true
+warn_unreachable = true
+pretty = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+# cvxpy and scikit-learn expose mostly dynamic APIs; treat them as untyped.
+module = ["cvxpy", "cvxpy.*", "sklearn", "sklearn.*"]
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["drl_cox.estimator"]
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = [
+  "joblib.*",
+  "matplotlib.*",
+  "scipy.*",
+  "seaborn.*",
+  "sklearn.*",
+  "skopt.*",
+  "tqdm.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+xfail_strict = true
+filterwarnings = ["error::DeprecationWarning:drl_cox.*"]
+
+[tool.coverage.run]
+source = ["drl_cox"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+  "@overload",
+]
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.1.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
