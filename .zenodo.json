@@ -1,0 +1,42 @@
+{
+  "upload_type": "software",
+  "title": "drl-cox: distributionally robust Cox regression in Python",
+  "description": "<p>Python implementation of the Wasserstein distributionally robust Cox regression model (DRL-Cox) introduced by Jin, Wise and Paschalidis (CHIL 2025), with classical Cox baselines, censoring-aware evaluation metrics, preprocessing utilities and a scikit-learn compatible estimator. The solver builds the exponential-cone program with CVXPY.</p>",
+  "creators": [
+    {
+      "name": "Ribeiro, Diogo"
+    }
+  ],
+  "access_right": "open",
+  "license": "MIT",
+  "language": "eng",
+  "keywords": [
+    "survival analysis",
+    "Cox regression",
+    "distributionally robust optimization",
+    "Wasserstein distance",
+    "robust statistics",
+    "convex optimization",
+    "Python"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.48550/arXiv.2506.01348",
+      "relation": "cites",
+      "resource_type": "publication-conferencepaper"
+    },
+    {
+      "identifier": "https://proceedings.mlr.press/v287/jin25a.html",
+      "relation": "cites",
+      "resource_type": "publication-conferencepaper"
+    },
+    {
+      "identifier": "https://diogoribeiro7.github.io/drl-cox/",
+      "relation": "isDocumentedBy",
+      "resource_type": "publication-other"
+    }
+  ],
+  "references": [
+    "Jin, Y., Wise, L., & Paschalidis, I. Ch. (2025). Distributionally Robust Learning in Survival Analysis. Proceedings of the Conference on Health, Inference, and Learning (CHIL), PMLR 287:1-12. https://arxiv.org/abs/2506.01348"
+  ]
+}

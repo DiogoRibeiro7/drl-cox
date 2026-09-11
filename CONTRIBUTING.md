@@ -69,11 +69,15 @@ available on Python 3.13.
 
 ## Releasing
 
-1. Update the version in `pyproject.toml` and `CITATION.cff`, move the
-   `Unreleased` notes in `CHANGELOG.md` under the new version, and merge to `main`.
+1. Update the version and release date in `pyproject.toml` and `CITATION.cff`,
+   move the `Unreleased` notes in `CHANGELOG.md` under the new version, and merge
+   to `main`.
 2. Tag the merge commit: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. The `Release` workflow builds the distribution, publishes it to PyPI through
    trusted publishing, and creates a GitHub release with generated notes.
+4. If the repository is enabled on Zenodo (GitHub integration), the GitHub release
+   is archived automatically with metadata from `.zenodo.json` and gets a DOI; add
+   the DOI to `CITATION.cff` and the README badge afterwards.
 
 ## Reporting bugs and requesting features
 
