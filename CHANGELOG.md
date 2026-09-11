@@ -48,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `.zenodo.json` so that GitHub releases archived on Zenodo carry the right title,
+  author, license, keywords and a link to the DRL-Cox paper.
 - `fit_drl_cox(formulation=...)`: `"events"` builds slack constraints only for event
   rows (same optimum, about half the problem size); `"auto"` (default) uses it for ECOS
   and SCS and keeps the full formulation for Clarabel, which stalls on the reduced one.
