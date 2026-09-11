@@ -14,7 +14,7 @@ The package is distributed through GitHub releases, not PyPI.
 Install a tagged release straight from the repository:
 
 ```bash
-pip install "drl-cox @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.1.0"
+pip install "drl-cox @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.2.0"
 ```
 
 or download the wheel attached to a [release](https://github.com/DiogoRibeiro7/drl-cox/releases)
@@ -23,7 +23,7 @@ and install it with `pip install drl_cox-<version>-py3-none-any.whl`.
 ### Using Poetry
 
 ```bash
-poetry add "git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.1.0"
+poetry add "git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.2.0"
 ```
 
 ### From Source
@@ -51,7 +51,7 @@ with CVXPY and is the default. SCS is also installed. The legacy ECOS solver can
 added on Python 3.11 and 3.12 with:
 
 ```bash
-pip install "drl-cox[ecos] @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.1.0"
+pip install "drl-cox[ecos] @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.2.0"
 ```
 
 MOSEK works as well if you have a licence.
