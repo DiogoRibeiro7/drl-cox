@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `DRLCoxResult.s` is now aligned with the rows of the input data (it was returned in
+  descending-time order) and is zero for censored observations.
 - `fit_drl_cox` failed on NumPy >= 2.5 (`float()` of a one-element array).
 - `DRLCoxEstimator.fit` failed on scikit-learn >= 1.7 (removed private `_validate_data`).
 - IPCW weights in `SurvivalStandardScaler` could become infinite when the censoring

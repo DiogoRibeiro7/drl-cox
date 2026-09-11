@@ -97,7 +97,24 @@ class SurvivalDataset:
 
 @dataclass
 class DRLCoxResult:
-    """Output of :func:`fit_drl_cox`."""
+    """Output of :func:`fit_drl_cox`.
+
+    Attributes
+    ----------
+    beta : np.ndarray
+        Fitted coefficients.
+    alpha : float
+        Fitted time-scale coefficient.
+    s : np.ndarray
+        Per-observation worst-case loss (slack) aligned with the rows of the input data;
+        zero for censored observations.
+    objective_value : float
+        Optimal objective value.
+    status : str
+        CVXPY solver status.
+    info : dict
+        Solver name, dual norm order ``q``, ``epsilon`` and ``gamma``.
+    """
 
     beta: np.ndarray
     alpha: float
@@ -147,10 +164,15 @@ def fit_drl_cox(
 
     beta = cp.Variable(d)
     alpha = cp.Variable(1)
-    s = cp.Variable(N)
 
     q = _dual_p(p)
     beta_dot_X = Xs @ beta
+
+    # Slack variables and log-sum-exp constraints are created for every row, although
+    # censored rows have zero weight in the objective. Restricting them to event rows
+    # halves the problem size but makes Clarabel stall (InsufficientProgress) on roughly
+    # half of realistic instances, so the redundant constraints are kept on purpose.
+    s = cp.Variable(N)
 
     constraints: list[cp.Constraint] = []
     for i in range(N):
@@ -171,10 +193,17 @@ def fit_drl_cox(
     if alpha.value is not None:
         alpha_value = float(np.asarray(alpha.value, dtype=float).reshape(-1)[0])
 
+    # Slack values in the original row order; censored rows carry no slack.
+    s_sorted = np.zeros(N)
+    if s.value is not None:
+        s_sorted = np.where(zs == 1, np.asarray(s.value, dtype=float).reshape(-1), 0.0)
+    s_original = np.empty(N)
+    s_original[order] = s_sorted
+
     return DRLCoxResult(
         beta=np.asarray(beta.value, dtype=float).reshape(-1),
         alpha=alpha_value,
-        s=np.asarray(s.value, dtype=float).reshape(-1),
+        s=s_original,
         objective_value=float(problem.value) if problem.value is not None else float("nan"),
         status=str(problem.status),
         info={"solver": solver, "q": q, "epsilon": epsilon, "gamma": gamma},
