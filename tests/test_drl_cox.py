@@ -57,3 +57,43 @@ def test_epsilon_zero():
     result = fit_drl_cox(data, epsilon=0.0, gamma=2)
     assert result.beta.shape == (4,)
     assert result.status == "optimal"
+
+
+def test_formulations_reach_the_same_optimum():
+    """The event-only formulation drops zero-weight rows without changing the solution."""
+    data = simulate_cox_data(n=40, d=3, seed=5)
+    full = fit_drl_cox(data, epsilon=0.05, gamma=2, formulation="full")
+    events = fit_drl_cox(data, epsilon=0.05, gamma=2, formulation="events")
+
+    assert full.info["formulation"] == "full"
+    assert events.info["formulation"] == "events"
+    np.testing.assert_allclose(events.beta, full.beta, atol=1e-4)
+    assert events.alpha == pytest.approx(full.alpha, abs=1e-4)
+    assert events.objective_value == pytest.approx(full.objective_value, abs=1e-6)
+    np.testing.assert_allclose(events.s, full.s, atol=1e-4)
+
+
+def test_slack_values_follow_input_rows():
+    """Slack values are aligned with the input rows and vanish for censored rows."""
+    data = simulate_cox_data(n=40, d=3, seed=6)
+    result = fit_drl_cox(data, epsilon=0.05, gamma=2)
+
+    assert result.s.shape == (40,)
+    assert np.all(result.s[data.zeta == 0] == 0.0)
+    assert np.all(result.s[data.zeta == 1] > 0.0)
+
+
+def test_auto_formulation_follows_the_solver():
+    """Clarabel gets the full formulation, SCS the event-only one."""
+    data = simulate_cox_data(n=30, d=3, seed=7)
+    clarabel = fit_drl_cox(data, epsilon=0.05, gamma=2, solver="CLARABEL")
+    scs = fit_drl_cox(data, epsilon=0.05, gamma=2, solver="SCS", solver_opts={"max_iters": 500})
+
+    assert clarabel.info["formulation"] == "full"
+    assert scs.info["formulation"] == "events"
+
+
+def test_invalid_formulation_is_rejected():
+    data = simulate_cox_data(n=20, d=2, seed=8)
+    with pytest.raises(ValueError, match="formulation"):
+        fit_drl_cox(data, epsilon=0.05, gamma=2, formulation="fast")
