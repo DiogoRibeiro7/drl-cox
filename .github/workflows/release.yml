@@ -1,10 +1,9 @@
 name: Release
 
-# Publishes to PyPI (trusted publishing) and creates a GitHub release when a
-# version tag such as v0.2.0 is pushed. The tag must match the version in
-# pyproject.toml. One-time setup: register this workflow as a trusted publisher
-# for the "drl-cox" project on PyPI and create a "pypi" environment in the
-# repository settings.
+# Builds the wheel and sdist and creates a GitHub release (with the files
+# attached) when a version tag such as v0.2.0 is pushed. The tag must match the
+# version in pyproject.toml. The package is not published to PyPI; releases are
+# archived on Zenodo through its GitHub integration.
 
 on:
   push:
@@ -51,25 +50,6 @@ jobs:
           name: dist
           path: dist/
           if-no-files-found: error
-
-  publish-pypi:
-    name: Publish to PyPI
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment:
-      name: pypi
-      url: https://pypi.org/project/drl-cox/
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: dist
-          path: dist/
-
-      - name: Publish
-        uses: pypa/gh-action-pypi-publish@release/v1
 
   github-release:
     name: Create GitHub release

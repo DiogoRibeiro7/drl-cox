@@ -56,8 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The formulation used is reported in `DRLCoxResult.info`.
 - CI matrix on Linux (Python 3.11-3.13), macOS and Windows, with lint, format,
   type-check, lock consistency, package build verification and strict docs build.
-- Release workflow: tag `vX.Y.Z` publishes to PyPI with trusted publishing and
-  creates a GitHub release.
+- Release workflow: tag `vX.Y.Z` builds the wheel and sdist and creates a GitHub
+  release with the files attached (no PyPI publishing).
 - MkDocs Material documentation with an auto-generated API reference, deployed to
   GitHub Pages.
 - `CITATION.cff`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, issue forms, `.editorconfig`,

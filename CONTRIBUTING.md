@@ -73,8 +73,9 @@ available on Python 3.13.
    move the `Unreleased` notes in `CHANGELOG.md` under the new version, and merge
    to `main`.
 2. Tag the merge commit: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-3. The `Release` workflow builds the distribution, publishes it to PyPI through
-   trusted publishing, and creates a GitHub release with generated notes.
+3. The `Release` workflow builds the wheel and sdist and creates a GitHub release
+   with generated notes and the files attached. The package is not published to
+   PyPI.
 4. If the repository is enabled on Zenodo (GitHub integration), the GitHub release
    is archived automatically with metadata from `.zenodo.json` and gets a DOI; add
    the DOI to `CITATION.cff` and the README badge afterwards.
