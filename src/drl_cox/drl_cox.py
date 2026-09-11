@@ -15,6 +15,7 @@ from .metrics import concordance_index, time_dependent_auc_iAUC
 
 __all__ = [
     "DEFAULT_SOLVER",
+    "EVENT_ONLY_SOLVERS",
     "SurvivalDataset",
     "DRLCoxResult",
     "fit_drl_cox",
@@ -31,6 +32,16 @@ required by DRL-Cox and is installed together with CVXPY on every supported Pyth
 version. ``"SCS"`` is a first-order alternative for large problems; ``"ECOS"`` can be
 used on Python < 3.13 after installing the ``drl-cox[ecos]`` extra.
 """
+
+EVENT_ONLY_SOLVERS: frozenset[str] = frozenset({"ECOS", "SCS"})
+"""Solvers for which ``formulation="auto"`` builds constraints for event rows only.
+
+The reduced problem has the same optimum and about half the size, but Clarabel stalls
+on it for a sizeable share of instances, so Clarabel (and any unlisted solver) gets the
+full formulation.
+"""
+
+Formulation = Literal["auto", "full", "events"]
 
 
 def _assert_ndarray(name: str, arr: np.ndarray, ndim: int | None = None) -> None:
@@ -52,6 +63,16 @@ def _dual_p(p: float) -> float:
 
 def _norm_with_p(x: cp.Expression, q: float) -> cp.Expression:
     return cp.norm_inf(x) if math.isinf(q) else cp.norm(x, q)
+
+
+def _resolve_formulation(formulation: str, solver: str) -> Literal["full", "events"]:
+    if formulation == "full":
+        return "full"
+    if formulation == "events":
+        return "events"
+    if formulation != "auto":
+        raise ValueError("formulation must be 'auto', 'full' or 'events'.")
+    return "events" if solver.upper() in EVENT_ONLY_SOLVERS else "full"
 
 
 @dataclass(frozen=True)
@@ -113,7 +134,8 @@ class DRLCoxResult:
     status : str
         CVXPY solver status.
     info : dict
-        Solver name, dual norm order ``q``, ``epsilon`` and ``gamma``.
+        Solver name, the formulation used (``"full"`` or ``"events"``), dual norm
+        order ``q``, ``epsilon`` and ``gamma``.
     """
 
     beta: np.ndarray
@@ -131,6 +153,7 @@ def fit_drl_cox(
     gamma: int = 3,
     solver: str = DEFAULT_SOLVER,
     solver_opts: dict[str, Any] | None = None,
+    formulation: Formulation = "auto",
 ) -> DRLCoxResult:
     """Fit the Wasserstein distributionally robust Cox model.
 
@@ -148,6 +171,12 @@ def fit_drl_cox(
         Name of a CVXPY solver supporting the exponential cone.
     solver_opts : dict, optional
         Keyword arguments forwarded to ``cvxpy.Problem.solve``.
+    formulation : {"auto", "full", "events"}, default="auto"
+        Which rows receive a slack variable and its log-sum-exp constraints. ``"full"``
+        uses every row and is the robust choice for Clarabel. ``"events"`` uses only
+        event rows: same optimum, about half the problem size, faster with ECOS and SCS.
+        ``"auto"`` picks ``"events"`` for the solvers in :data:`EVENT_ONLY_SOLVERS` and
+        ``"full"`` otherwise.
     """
     if epsilon < 0:
         raise ValueError("epsilon must be >= 0.")
@@ -162,29 +191,37 @@ def fit_drl_cox(
     ys = y[order]
     zs = z[order]
 
+    chosen = _resolve_formulation(formulation, solver)
+
     beta = cp.Variable(d)
     alpha = cp.Variable(1)
 
     q = _dual_p(p)
     beta_dot_X = Xs @ beta
 
-    # Slack variables and log-sum-exp constraints are created for every row, although
-    # censored rows have zero weight in the objective. Restricting them to event rows
-    # halves the problem size but makes Clarabel stall (InsufficientProgress) on roughly
-    # half of realistic instances, so the redundant constraints are kept on purpose.
-    s = cp.Variable(N)
+    # "full" gives every row a slack and its log-sum-exp constraints although censored
+    # rows have zero weight; "events" keeps only event rows. The optimum is the same,
+    # but Clarabel stalls (InsufficientProgress) on the reduced problem for roughly
+    # half of realistic instances, hence the solver-dependent default.
+    rows = np.flatnonzero(zs == 1) if chosen == "events" else np.arange(N)
+    n_rows = int(rows.size)
+    s = cp.Variable(max(n_rows, 1))
 
     constraints: list[cp.Constraint] = []
-    for i in range(N):
+    for pos, i in enumerate(rows):
         i_to = min(N - 1, i + gamma - 1)
         for k in range(i, i_to + 1):
             concat = cp.hstack([beta_dot_X[i], beta_dot_X[: (k + 1)]])
             lse_expr = cp.log_sum_exp(concat)
             rhs = lse_expr - beta_dot_X[i] - alpha * (ys[i] - ys[k])
-            constraints.append(s[i] >= rhs)
+            constraints.append(s[pos] >= rhs)
 
     reg = epsilon * _norm_with_p(cp.hstack([beta, alpha]), q)
-    empirical = (1.0 / N) * cp.sum(cp.multiply(zs, s))
+    if n_rows:
+        empirical = (1.0 / N) * cp.sum(cp.multiply(zs[rows], s))
+    else:  # no events: the empirical term vanishes and the dummy slack is pinned at zero
+        constraints.append(s >= 0)
+        empirical = cp.sum(s)
     problem = cp.Problem(cp.Minimize(reg + empirical), constraints)
 
     problem.solve(solver=solver, **(solver_opts or {}))
@@ -195,8 +232,8 @@ def fit_drl_cox(
 
     # Slack values in the original row order; censored rows carry no slack.
     s_sorted = np.zeros(N)
-    if s.value is not None:
-        s_sorted = np.where(zs == 1, np.asarray(s.value, dtype=float).reshape(-1), 0.0)
+    if n_rows and s.value is not None:
+        s_sorted[rows] = np.asarray(s.value, dtype=float).reshape(-1) * zs[rows]
     s_original = np.empty(N)
     s_original[order] = s_sorted
 
@@ -206,7 +243,13 @@ def fit_drl_cox(
         s=s_original,
         objective_value=float(problem.value) if problem.value is not None else float("nan"),
         status=str(problem.status),
-        info={"solver": solver, "q": q, "epsilon": epsilon, "gamma": gamma},
+        info={
+            "solver": solver,
+            "formulation": chosen,
+            "q": q,
+            "epsilon": epsilon,
+            "gamma": gamma,
+        },
     )
 
 

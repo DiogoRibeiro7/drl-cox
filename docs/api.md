@@ -46,7 +46,8 @@ def fit_drl_cox(
     p: float = 2.0,
     gamma: int = 3,
     solver: str = "CLARABEL",
-    solver_opts: Optional[Dict[str, Any]] = None,
+    solver_opts: dict[str, Any] | None = None,
+    formulation: Literal["auto", "full", "events"] = "auto",
 ) -> DRLCoxResult:
     """Fit the Wasserstein distributionally robust Cox model."""
 ```
@@ -59,6 +60,9 @@ def fit_drl_cox(
 * `gamma`: Number of risk set constraints per observation
 * `solver`: CVXPY solver name
 * `solver_opts`: Solver-specific options
+* `formulation`: `"full"` builds slack constraints for every row (robust with Clarabel);
+  `"events"` only for event rows (same optimum, about half the size, faster with ECOS
+  and SCS); `"auto"` chooses by solver
 
 **Returns:**
 

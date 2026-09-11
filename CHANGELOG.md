@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `fit_drl_cox(formulation=...)`: `"events"` builds slack constraints only for event
+  rows (same optimum, about half the problem size); `"auto"` (default) uses it for ECOS
+  and SCS and keeps the full formulation for Clarabel, which stalls on the reduced one.
+  The formulation used is reported in `DRLCoxResult.info`.
 - CI matrix on Linux (Python 3.11-3.13), macOS and Windows, with lint, format,
   type-check, lock consistency, package build verification and strict docs build.
 - Release workflow: tag `vX.Y.Z` publishes to PyPI with trusted publishing and
