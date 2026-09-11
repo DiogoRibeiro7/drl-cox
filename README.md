@@ -39,14 +39,18 @@ preprint is kept in [`paper/`](paper/) for convenience.
 
 Requires Python 3.11, 3.12 or 3.13.
 
+The package is distributed through GitHub releases, not PyPI. Install the latest
+release directly from the repository:
+
 ```bash
-pip install drl-cox
+pip install "drl-cox @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.1.0"
 ```
 
-For the legacy ECOS solver (Python 3.11 and 3.12 only):
+or download the wheel attached to a [release](https://github.com/DiogoRibeiro7/drl-cox/releases)
+and `pip install` it. For the legacy ECOS solver (Python 3.11 and 3.12 only):
 
 ```bash
-pip install "drl-cox[ecos]"
+pip install "drl-cox[ecos] @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.1.0"
 ```
 
 From source, with [Poetry](https://python-poetry.org/) 2:
@@ -133,8 +137,8 @@ poetry run mkdocs serve          # documentation preview
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, and [CHANGELOG.md](CHANGELOG.md)
-for release notes. Releases are published to PyPI automatically when a `vX.Y.Z` tag is
-pushed.
+for release notes. Pushing a `vX.Y.Z` tag builds the package, attaches it to a GitHub
+release and, through the Zenodo integration, archives the release with a DOI.
 
 ## Citing
 
