@@ -43,14 +43,14 @@ The package is distributed through GitHub releases, not PyPI. Install the latest
 release directly from the repository:
 
 ```bash
-pip install "drl-cox @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.1.0"
+pip install "drl-cox @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.2.0"
 ```
 
 or download the wheel attached to a [release](https://github.com/DiogoRibeiro7/drl-cox/releases)
 and `pip install` it. For the legacy ECOS solver (Python 3.11 and 3.12 only):
 
 ```bash
-pip install "drl-cox[ecos] @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.1.0"
+pip install "drl-cox[ecos] @ git+https://github.com/DiogoRibeiro7/drl-cox.git@v0.2.0"
 ```
 
 From source, with [Poetry](https://python-poetry.org/) 2:

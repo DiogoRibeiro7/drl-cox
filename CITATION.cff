@@ -13,8 +13,8 @@ authors:
   - family-names: Ribeiro
     given-names: Diogo
     email: dfr@esmad.ipp.pt
-version: 0.1.0
-date-released: "2025-10-12"
+version: 0.2.0
+date-released: "2026-09-11"
 license: MIT
 repository-code: https://github.com/DiogoRibeiro7/drl-cox
 url: https://diogoribeiro7.github.io/drl-cox/

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-11
+
 ### Changed
 
 - **Default solver is now Clarabel** (`DEFAULT_SOLVER = "CLARABEL"`). CVXPY no longer
@@ -86,5 +88,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-validation framework for epsilon tuning.
 - Demo script for the WHAS500 dataset.
 
-[Unreleased]: https://github.com/DiogoRibeiro7/drl-cox/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/DiogoRibeiro7/drl-cox/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/DiogoRibeiro7/drl-cox/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/DiogoRibeiro7/drl-cox/releases/tag/v0.1.0

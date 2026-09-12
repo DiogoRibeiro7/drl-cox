@@ -1,6 +1,6 @@
 [project]
 name = "drl-cox"
-version = "0.1.0"
+version = "0.2.0"
 description = "Distributionally robust Cox regression with Wasserstein ambiguity sets, plus classical Cox baselines and survival evaluation utilities."
 readme = "README.md"
 license = "MIT"
