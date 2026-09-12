@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue)](https://mypy-lang.org/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22722209.svg)](https://doi.org/10.5281/zenodo.22722209)
 
 Distributionally robust Cox regression with Wasserstein ambiguity sets, in Python.
 
@@ -143,7 +144,21 @@ release and, through the Zenodo integration, archives the release with a DOI.
 ## Citing
 
 If you use this package, please cite both the software and the paper it implements.
-Citation metadata for the software is in [CITATION.cff](CITATION.cff).
+
+Every release is archived on Zenodo. Cite the concept DOI
+[10.5281/zenodo.22722209](https://doi.org/10.5281/zenodo.22722209) to refer to the software in general, or the DOI
+of the version you used. Ready-made citation metadata is in
+[CITATION.cff](CITATION.cff), and GitHub renders it under "Cite this repository".
+
+```bibtex
+@software{ribeiro_drl_cox,
+  title     = {drl-cox: distributionally robust Cox regression in Python},
+  author    = {Ribeiro, Diogo},
+  year      = {2026},
+  doi       = {10.5281/zenodo.22722209},
+  url       = {https://github.com/DiogoRibeiro7/drl-cox}
+}
+```
 
 ```bibtex
 @inproceedings{jin2025drlcox,

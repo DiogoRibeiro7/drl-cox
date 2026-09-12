@@ -76,9 +76,10 @@ available on Python 3.13.
 3. The `Release` workflow builds the wheel and sdist and creates a GitHub release
    with generated notes and the files attached. The package is not published to
    PyPI.
-4. If the repository is enabled on Zenodo (GitHub integration), the GitHub release
-   is archived automatically with metadata from `.zenodo.json` and gets a DOI; add
-   the DOI to `CITATION.cff` and the README badge afterwards.
+4. Zenodo archives the GitHub release automatically (the integration is enabled)
+   using the metadata in `.zenodo.json`, and mints a DOI for the new version. The
+   concept DOI (10.5281/zenodo.22722209) does not change; add the new
+   version DOI to `CITATION.cff` after the release.
 
 ## Reporting bugs and requesting features
 
