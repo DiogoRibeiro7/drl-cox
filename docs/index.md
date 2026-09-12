@@ -31,8 +31,19 @@ program that is more robust to outliers, covariate shift and model misspecificat
 
 ## Citing
 
-If you use this package, cite both the software (see `CITATION.cff` in the
-repository) and the paper it implements:
+If you use this package, cite both the software and the paper it implements.
+Releases are archived on Zenodo; the concept DOI
+[10.5281/zenodo.22722209](https://doi.org/10.5281/zenodo.22722209) always resolves to the latest version.
+
+```bibtex
+@software{ribeiro_drl_cox,
+  title     = {drl-cox: distributionally robust Cox regression in Python},
+  author    = {Ribeiro, Diogo},
+  year      = {2026},
+  doi       = {10.5281/zenodo.22722209},
+  url       = {https://github.com/DiogoRibeiro7/drl-cox}
+}
+```
 
 ```bibtex
 @inproceedings{jin2025drlcox,
