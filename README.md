@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/project-avatar.png" alt="drl-cox project logo" width="160" height="160">
+</p>
+
 # DRL-Cox
 
 [![CI](https://github.com/DiogoRibeiro7/drl-cox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DiogoRibeiro7/drl-cox/actions/workflows/ci.yml)
