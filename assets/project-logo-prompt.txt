@@ -1,0 +1,7 @@
+Tool: built-in image generation
+
+Use case: logo-brand.
+Asset type: square project logo for drl-cox.
+Project purpose: Distributionally robust Cox regression with Wasserstein ambiguity sets. Includes classical baselines, evaluation metrics, and reproducible experiments.
+Design direction: A spare sumi-e research mark: a descending black stepped survival curve cradled inside a broad imperfect ink-brush circle, with one small dusty-rose uncertainty wash following the outside of the curve. Warm rice-paper background, subtle fiber texture, generous breathing room. Quiet Japanese ink-painting sensibility, mathematically clear steps, no shield, no words.
+Composition: one finished square image, visually distinctive and readable at 160 pixels, with enough margin for README display. Produce the actual artwork, not a mockup sheet or brand presentation. No watermark. Do not use a navy-and-gold metallic badge aesthetic.
